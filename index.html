@@ -1,0 +1,1725 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mission Control — Job Hunt + SSC CGL</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root{
+  --bg:#020817;
+  --bg2:#041226;
+  --bg3:#061a33;
+  --glass:rgba(255,255,255,0.042);
+  --glass-hover:rgba(255,255,255,0.072);
+  --glass-border:rgba(255,255,255,0.10);
+  --glass-border-hover:rgba(255,255,255,0.20);
+  --glass-blur:saturate(220%) blur(32px);
+  --text:#ddeeff;
+  --text-dim:#4a6a8a;
+  --cyan:#38b6d4;
+  --green:#3cb874;
+  --red:#d94f6e;
+  --amber:#c9893a;
+  --purple:#7c6ec7;
+  --blue:#3a7ecf;
+  --teal:#2aaa8e;
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);height:100%}
+body{
+  color:var(--text);
+  font-family:'Rajdhani',sans-serif;
+  min-height:100vh;
+  position:relative;
+  overflow-x:hidden;
+  background:
+    radial-gradient(ellipse 80% 60% at 20% -10%, rgba(14,40,90,0.55) 0%, transparent 60%),
+    radial-gradient(ellipse 70% 50% at 80% 110%, rgba(8,22,60,0.5) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 40% at 50% 50%, rgba(4,14,40,0.3) 0%, transparent 70%),
+    linear-gradient(180deg, #020817 0%, #041226 40%, #061a33 100%);
+  background-attachment:fixed;
+}
+
+#matrix-canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:0.55;}
+.ambient{position:fixed;top:0;left:0;width:100%;height:100%;z-index:1;pointer-events:none;
+  background:
+    radial-gradient(ellipse 55% 45% at 10% 15%, rgba(30,80,180,0.09) 0%, transparent 65%),
+    radial-gradient(ellipse 50% 40% at 90% 85%, rgba(60,50,160,0.07) 0%, transparent 65%),
+    radial-gradient(ellipse 40% 35% at 55% 50%, rgba(10,50,130,0.05) 0%, transparent 60%);}
+
+.wrap{max-width:760px;margin:0 auto;position:relative;padding:0 20px 40px;z-index:10}
+
+.header{
+  position:sticky;top:0;z-index:100;
+  display:flex;justify-content:space-between;align-items:center;
+  flex-wrap:wrap;gap:10px;padding:16px 20px;margin:0 -20px 20px;
+  background:rgba(2,8,23,0.62);
+  backdrop-filter:saturate(200%) blur(36px);-webkit-backdrop-filter:saturate(200%) blur(36px);
+  border-bottom:1px solid rgba(255,255,255,0.07);
+  box-shadow:0 1px 0 rgba(255,255,255,0.04),0 8px 40px rgba(0,0,0,0.55);}
+
+.title{
+  font-family:'Orbitron',sans-serif;font-size:22px;font-weight:700;
+  color:#c8e4ff;letter-spacing:2px;
+  text-shadow:0 0 24px rgba(56,150,220,0.35),0 0 2px rgba(255,255,255,0.2);}
+.title small{
+  display:block;font-family:'Rajdhani',sans-serif;font-size:11px;letter-spacing:3px;
+  color:var(--text-dim);font-weight:500;margin-top:4px;text-transform:uppercase;}
+
+.clock{
+  font-family:'JetBrains Mono',monospace;font-size:14px;color:#a8d4f0;
+  background:rgba(10,28,60,0.52);
+  backdrop-filter:saturate(200%) blur(28px);-webkit-backdrop-filter:saturate(200%) blur(28px);
+  border:1px solid rgba(80,140,220,0.18);
+  border-radius:16px;padding:10px 16px;letter-spacing:1px;
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.08) inset,
+    0 -1px 0 rgba(0,0,20,0.4) inset,
+    0 4px 24px rgba(0,0,0,0.45),
+    0 0 0 1px rgba(40,80,160,0.08);
+  display:flex;align-items:center;gap:10px;overflow:hidden;}
+.clock-live{display:inline-flex;align-items:center;gap:0}
+.digit-slot{display:inline-block;height:1.2em;width:0.62em;overflow:hidden;vertical-align:bottom;position:relative;}
+.digit-inner{display:flex;flex-direction:column;transition:transform 0.35s cubic-bezier(0.25,0.8,0.25,1);}
+.digit-inner span{display:block;height:1.2em;line-height:1.2em;text-align:center;}
+.clock-sep{color:#5a9fcc;font-size:16px;margin:0 1px;animation:sep-blink 1s step-start infinite;display:inline-block;}
+@keyframes sep-blink{0%,49%{opacity:1}50%,100%{opacity:0}}
+.clock-ampm{font-size:10px;color:rgba(100,170,220,0.6);margin-left:4px;letter-spacing:0.5px;}
+.clock-date{font-size:11px;color:rgba(100,160,210,0.45);margin-left:8px;border-left:1px solid rgba(80,140,200,0.18);padding-left:8px;}
+@keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.3;transform:scale(0.6)}}
+#analog-clock{width:26px;height:26px;flex-shrink:0;position:relative;}
+#analog-clock canvas{display:block;}
+
+.glass{
+  background:rgba(8,22,52,0.48);
+  backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);
+  border:1px solid rgba(255,255,255,0.09);
+  border-radius:18px;
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.07) inset,
+    0 -1px 0 rgba(0,0,30,0.35) inset,
+    0 8px 36px rgba(0,0,0,0.45),
+    0 2px 8px rgba(0,0,0,0.25);
+  transition:all .3s cubic-bezier(.34,1.56,.64,1);
+  position:relative;overflow:hidden;}
+.glass::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,0.13),transparent);
+  border-radius:18px 18px 0 0;}
+.glass:hover{
+  background:rgba(10,28,65,0.58);
+  border-color:rgba(255,255,255,0.15);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.10) inset,
+    0 -1px 0 rgba(0,0,30,0.35) inset,
+    0 16px 52px rgba(0,0,0,0.5),
+    0 0 0 1px rgba(60,120,220,0.08),
+    0 0 28px var(--accent,rgba(50,120,220,0.08));}
+
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text-dim);}
+.legend span{display:flex;align-items:center;gap:6px;}
+.legend .dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0;}
+.topbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:18px;}
+
+.reset-btn{
+  font-family:'Orbitron',sans-serif;font-size:10.5px;letter-spacing:1.5px;text-transform:uppercase;
+  padding:8px 14px;border-radius:10px;
+  border:1px solid rgba(180,60,80,0.25);background:rgba(180,60,80,0.05);
+  color:var(--red);cursor:pointer;transition:all .2s;}
+.reset-btn:hover{border-color:var(--red);box-shadow:0 0 14px rgba(180,60,80,0.15);background:rgba(180,60,80,0.09);}
+
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;}
+.tab{
+  font-family:'Orbitron',sans-serif;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;
+  padding:9px 16px;border-radius:12px;
+  border:1px solid rgba(255,255,255,0.08);
+  background:rgba(8,20,50,0.45);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  color:var(--text-dim);cursor:pointer;
+  transition:all .25s cubic-bezier(.34,1.56,.64,1);
+  box-shadow:0 1px 0 rgba(255,255,255,0.05) inset;}
+.tab:hover{
+  border-color:rgba(60,120,210,0.28);color:var(--text);
+  transform:translateY(-3px) scale(1.04);
+  background:rgba(15,35,80,0.55);}
+.tab.on{
+  border-color:rgba(56,150,212,0.38);color:#8ec8e8;
+  background:rgba(20,50,110,0.52);
+  box-shadow:0 0 18px rgba(40,100,200,0.14),0 1px 0 rgba(255,255,255,0.07) inset;}
+.tab .pulse{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--teal);margin-left:6px;box-shadow:0 0 5px rgba(42,170,142,0.5);animation:pulse-dot 1.6s infinite;}
+
+/* FIX: wider min column for better mobile layout */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;margin-bottom:18px;align-items:stretch;}
+.stat{
+  padding:14px 16px;--accent:var(--cyan);
+  background:rgba(8,20,52,0.52)!important;
+  backdrop-filter:saturate(220%) blur(32px)!important;-webkit-backdrop-filter:saturate(220%) blur(32px)!important;
+  border:1px solid rgba(255,255,255,0.10)!important;
+  border-radius:18px;position:relative;overflow:hidden;
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.10) inset,
+    0 -1px 0 rgba(0,0,30,0.3) inset,
+    0 10px 40px rgba(0,0,0,0.5),
+    0 2px 8px rgba(0,0,10,0.3)!important;
+  cursor:pointer;transition:all .25s cubic-bezier(.34,1.56,.64,1);}
+/* FIX: stat shimmer top line (was missing because .glass class not on .stat) */
+.stat::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,0.16),transparent);
+  border-radius:18px 18px 0 0;pointer-events:none;z-index:1;}
+.stat::after{
+  content:'';position:absolute;left:0;top:0;width:3px;height:100%;
+  background:var(--accent);
+  box-shadow:0 0 10px rgba(0,0,0,0.2);
+  border-radius:18px 0 0 18px;}
+.stat:hover{
+  transform:translateY(-3px) scale(1.03);
+  background:rgba(12,28,68,0.68)!important;
+  border-color:rgba(255,255,255,0.17)!important;
+  box-shadow:
+    0 0 0 1px var(--accent),
+    0 0 22px rgba(30,80,180,0.12),
+    0 1px 0 rgba(255,255,255,0.14) inset,
+    0 14px 48px rgba(0,0,0,0.55)!important;}
+.stat-l{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin-bottom:6px;position:relative;z-index:1;}
+.stat-v{font-family:'Orbitron',sans-serif;font-size:18px;font-weight:700;color:var(--text);position:relative;z-index:1;}
+.stat-v.small{font-size:13px;padding-top:2px;font-family:'Rajdhani',sans-serif;font-weight:600;line-height:1.4;}
+
+.modal-backdrop{
+  position:fixed;inset:0;z-index:2000;
+  background:rgba(0,0,0,0);
+  backdrop-filter:blur(0px);-webkit-backdrop-filter:blur(0px);
+  display:flex;align-items:flex-end;justify-content:center;
+  pointer-events:none;
+  transition:background .35s ease, backdrop-filter .35s ease;}
+.modal-backdrop.open{
+  background:rgba(1,5,18,0.80);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  pointer-events:all;}
+.modal-panel{
+  width:100%;max-width:720px;max-height:88vh;
+  background:rgba(4,14,38,0.97);
+  border:1px solid rgba(255,255,255,0.10);
+  border-bottom:none;border-radius:24px 24px 0 0;
+  display:flex;flex-direction:column;
+  transform:translateY(100%);
+  transition:transform .4s cubic-bezier(.22,1,.36,1);
+  overflow:hidden;
+  box-shadow:0 -12px 72px rgba(0,0,30,0.8),0 1px 0 rgba(255,255,255,0.07) inset;
+  position:relative;}
+.modal-panel::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,0.14),transparent);}
+.modal-backdrop.open .modal-panel{transform:translateY(0);}
+.modal-drag{width:40px;height:4px;background:rgba(255,255,255,0.14);border-radius:2px;margin:14px auto 0;}
+.modal-header{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:16px 24px 14px;
+  border-bottom:1px solid rgba(255,255,255,0.07);flex-shrink:0;}
+.modal-title{font-family:'Orbitron',sans-serif;font-size:14px;font-weight:700;letter-spacing:2px;text-transform:uppercase;}
+.modal-close{
+  width:32px;height:32px;border-radius:50%;
+  border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.05);
+  color:var(--text-dim);font-size:18px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;transition:all .2s;}
+.modal-close:hover{border-color:var(--red);color:var(--red);background:rgba(170,50,70,0.1);}
+.modal-body{overflow-y:auto;flex:1;padding:20px 24px 32px;}
+.modal-body::-webkit-scrollbar{width:3px;}
+.modal-body::-webkit-scrollbar-track{background:transparent;}
+.modal-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.12);border-radius:2px;}
+
+.ssc-section{margin-bottom:20px;}
+.ssc-section-title{
+  font-family:'Orbitron',sans-serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;
+  padding:10px 14px;border-radius:10px;margin-bottom:10px;
+  display:flex;align-items:center;gap:10px;}
+.ssc-section-title.qa{color:var(--teal);background:rgba(42,170,142,0.07);border:1px solid rgba(42,170,142,0.18);}
+.ssc-section-title.gi{color:var(--purple);background:rgba(124,110,199,0.07);border:1px solid rgba(124,110,199,0.18);}
+.ssc-section-title.en{color:var(--blue);background:rgba(58,126,207,0.07);border:1px solid rgba(58,126,207,0.18);}
+.ssc-section-title.ga{color:var(--amber);background:rgba(201,137,58,0.07);border:1px solid rgba(201,137,58,0.18);}
+.ssc-topics{display:flex;flex-wrap:wrap;gap:7px;padding:0 4px;}
+.ssc-tag{font-size:11.5px;font-weight:600;letter-spacing:0.5px;padding:5px 11px;border-radius:8px;transition:all .2s;}
+.ssc-tag.qa{background:rgba(42,170,142,0.09);color:var(--teal);border:1px solid rgba(42,170,142,0.20);}
+.ssc-tag.gi{background:rgba(124,110,199,0.09);color:var(--purple);border:1px solid rgba(124,110,199,0.20);}
+.ssc-tag.en{background:rgba(58,126,207,0.09);color:var(--blue);border:1px solid rgba(58,126,207,0.20);}
+.ssc-tag.ga{background:rgba(201,137,58,0.09);color:var(--amber);border:1px solid rgba(201,137,58,0.20);}
+.ssc-tag:hover{transform:scale(1.05);filter:brightness(1.18);}
+.ssc-num{font-family:'Orbitron',sans-serif;font-size:9px;opacity:0.6;}
+
+.job-platform-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:20px;}
+.job-card{
+  display:flex;align-items:center;gap:10px;
+  padding:12px 14px;border-radius:14px;
+  background:rgba(20,50,110,0.18);border:1px solid rgba(58,126,207,0.18);
+  text-decoration:none;color:var(--text);
+  transition:all .25s cubic-bezier(.34,1.56,.64,1);cursor:pointer;}
+.job-card:hover{transform:translateY(-3px) scale(1.03);background:rgba(25,60,130,0.28);border-color:rgba(58,126,207,0.35);box-shadow:0 0 18px rgba(40,100,200,0.12);}
+.job-card-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.job-card-name{font-size:13px;font-weight:600;letter-spacing:0.3px;}
+.job-card-sub{font-size:10px;color:var(--text-dim);margin-top:2px;}
+.job-section-head{font-family:'Orbitron',sans-serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--blue);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid rgba(58,126,207,0.18);}
+.job-careers-box{
+  padding:16px 18px;border-radius:14px;
+  background:rgba(20,50,110,0.18);border:1px solid rgba(58,126,207,0.18);
+  font-size:13px;color:var(--text-dim);line-height:1.6;}
+.job-careers-box b{color:var(--text);}
+
+.code-category{margin-bottom:20px;}
+.code-cat-title{
+  font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:2px;text-transform:uppercase;
+  color:var(--purple);margin-bottom:10px;padding-bottom:6px;
+  border-bottom:1px solid rgba(124,110,199,0.18);}
+.code-platform-list{display:flex;flex-wrap:wrap;gap:8px;}
+.code-badge{
+  display:flex;align-items:center;gap:7px;
+  padding:8px 14px;border-radius:10px;
+  background:rgba(80,65,180,0.08);border:1px solid rgba(124,110,199,0.18);
+  font-size:12.5px;font-weight:600;color:var(--purple);
+  transition:all .2s cubic-bezier(.34,1.56,.64,1);cursor:default;}
+.code-badge:hover{transform:translateY(-2px) scale(1.04);background:rgba(100,85,200,0.14);border-color:rgba(124,110,199,0.35);box-shadow:0 0 12px rgba(100,85,200,0.14);}
+.code-badge.sql{background:rgba(42,170,142,0.08);border-color:rgba(42,170,142,0.18);color:var(--teal);}
+.code-badge.sql:hover{background:rgba(42,170,142,0.14);border-color:rgba(42,170,142,0.32);}
+.code-badge.py{background:rgba(201,137,58,0.08);border-color:rgba(201,137,58,0.18);color:var(--amber);}
+.code-badge.py:hover{background:rgba(201,137,58,0.14);border-color:rgba(201,137,58,0.32);}
+.code-badge.iv{background:rgba(58,126,207,0.08);border-color:rgba(58,126,207,0.18);color:var(--blue);}
+.code-badge.iv:hover{background:rgba(58,126,207,0.14);border-color:rgba(58,126,207,0.32);}
+.code-dot{width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0;opacity:0.65;}
+
+.quote-big{
+  text-align:center;padding:28px 20px;
+  font-size:20px;font-style:italic;color:var(--text);
+  line-height:1.5;font-family:'Rajdhani',sans-serif;font-weight:600;
+  border-bottom:1px solid rgba(255,255,255,0.06);margin-bottom:20px;}
+.quote-big::before{content:'\201C';font-size:40px;color:var(--amber);opacity:0.55;display:block;line-height:1;margin-bottom:6px;font-style:normal;}
+.quote-timer{display:flex;align-items:center;justify-content:center;gap:8px;font-size:11px;color:var(--text-dim);letter-spacing:1px;margin-bottom:24px;}
+.quote-timer-dot{width:6px;height:6px;border-radius:50%;background:var(--amber);animation:pulse-dot 1.4s infinite;}
+.quote-all-title{font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:2px;color:var(--text-dim);text-transform:uppercase;margin-bottom:12px;padding-left:4px;}
+.quote-list{display:flex;flex-direction:column;gap:8px;}
+.quote-item{
+  padding:11px 14px;border-radius:12px;
+  background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.06);
+  font-size:13px;font-style:italic;color:var(--text-dim);line-height:1.5;
+  transition:all .2s;display:flex;align-items:flex-start;gap:10px;}
+.quote-item:hover{background:rgba(201,137,58,0.06);border-color:rgba(201,137,58,0.18);color:var(--text);}
+.quote-item.active-q{background:rgba(201,137,58,0.10);border-color:rgba(201,137,58,0.30);color:var(--amber);box-shadow:0 0 12px rgba(201,137,58,0.10);}
+.quote-num{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-dim);min-width:22px;padding-top:2px;opacity:0.5;}
+
+/* ── TASK BLOCKS ── */
+.blocks{display:flex;flex-direction:column;gap:8px;margin-bottom:18px;}
+.bl{
+  display:flex;gap:12px;align-items:center;
+  padding:13px 16px;
+  border-radius:16px;--accent:rgba(255,255,255,0.08);
+  background:rgba(6,18,48,0.50)!important;
+  backdrop-filter:saturate(200%) blur(28px)!important;-webkit-backdrop-filter:saturate(200%) blur(28px)!important;
+  border:1px solid rgba(255,255,255,0.08)!important;
+  box-shadow:0 1px 0 rgba(255,255,255,0.06) inset,0 6px 28px rgba(0,0,0,0.38)!important;
+  transition:all .25s cubic-bezier(.34,1.56,.64,1);
+  position:relative;
+  overflow:hidden;}
+/* FIX: shimmer line on blocks — separate pseudo from .glass since .bl overrides with !important */
+.bl::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,0.10),transparent);
+  border-radius:16px 16px 0 0;z-index:1;pointer-events:none;}
+.bl::after{content:'';position:absolute;left:0;top:0;width:3px;height:100%;background:var(--accent);box-shadow:0 0 8px rgba(0,0,0,0.3);border-radius:16px 0 0 16px;}
+.bl:hover{transform:translateX(4px) translateY(-2px) scale(1.008);background:rgba(10,28,70,0.60)!important;border-color:rgba(255,255,255,0.14)!important;}
+.bl.job{--accent:var(--blue)} .bl.ssc{--accent:var(--teal)} .bl.code{--accent:var(--purple)} .bl.loop{--accent:var(--amber)} .bl.brk{--accent:rgba(50,80,120,0.7)}
+.bl.tracked-open{
+  background:rgba(15,35,85,0.55)!important;
+  border-color:rgba(56,130,200,0.24)!important;
+  box-shadow:0 0 20px rgba(40,100,190,0.07),0 1px 0 rgba(255,255,255,0.07) inset,0 6px 28px rgba(0,0,0,0.38)!important;}
+.bl.tracked-done{background:rgba(20,60,45,0.30)!important;border-color:rgba(42,170,142,0.20)!important;}
+.bl.tracked-missed{background:rgba(80,20,35,0.20)!important;border-color:rgba(180,60,80,0.18)!important;}
+
+.btime{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-dim);min-width:88px;flex-shrink:0;letter-spacing:0.3px;line-height:1.5;}
+.bcontent{flex:1;min-width:0;}
+.bt{font-size:14px;font-weight:600;color:var(--text);margin-bottom:3px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.bd{font-size:12.5px;color:var(--text-dim);line-height:1.5;}
+.bdg{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;padding:3px 8px;border-radius:6px;font-weight:600;border:1px solid var(--accent);color:var(--accent);background:rgba(255,255,255,0.02);}
+
+/* ══════════════════════════════════════════
+   VISIONOS STATUS RINGS
+   ══════════════════════════════════════════ */
+
+.check{
+  width:34px;
+  height:34px;
+  flex-shrink:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  background:none;
+  border:none;
+  padding:0;
+  border-radius:50%;
+  transition:transform .22s cubic-bezier(.34,1.56,.64,1);}
+.check:hover{transform:scale(1.18);}
+.check:active{transform:scale(0.86);}
+
+/* FIX: done-locked and locked states — disable all pointer interaction and both hover/active transforms */
+.check.done-locked{cursor:not-allowed;pointer-events:none;}
+.check.done-locked:hover,.check.done-locked:active{transform:none;}
+.check.locked{cursor:not-allowed;pointer-events:none;}
+.check.locked:hover,.check.locked:active{transform:none;}
+/* FIX: missed state also shouldn't be interactive */
+.check.missed{cursor:default;}
+.check.missed:hover,.check.missed:active{transform:none;}
+
+.ring-svg{
+  width:34px;
+  height:34px;
+  display:block;
+  overflow:hidden;
+  flex-shrink:0;}
+
+/* ── OPEN: Apple spinner — comet arc, soft cyan glow ── */
+@keyframes vision-spin{
+  0%  { transform: rotate(0deg); }
+  100%{ transform: rotate(360deg); }
+}
+.ro-track{fill:none;stroke:rgba(56,182,212,0.12);stroke-width:1.8;}
+.ro-arc{
+  fill:none;stroke:url(#cometGrad);stroke-width:1.8;stroke-linecap:round;
+  stroke-dasharray:44 28;transform-origin:17px 17px;
+  animation:vision-spin 1.8s cubic-bezier(0.4,0,0.6,1) infinite;}
+.ro-glow{
+  fill:none;stroke:rgba(56,215,255,0.70);stroke-width:2.5;stroke-linecap:round;
+  stroke-dasharray:5 67;transform-origin:17px 17px;
+  animation:vision-spin 1.8s cubic-bezier(0.4,0,0.6,1) infinite;
+  filter:blur(2px);}
+
+/* ── DONE: activity ring fill → pulse → settle ── */
+@keyframes rd-fill{
+  0%  { stroke-dashoffset:75.4; opacity:0.6; }
+  55% { stroke-dashoffset:0;    opacity:1; }
+  100%{ stroke-dashoffset:0;    opacity:1; }
+}
+@keyframes rd-pulse{
+  0%  { transform:scale(1);    opacity:0;    stroke-width:0;}
+  25% { transform:scale(1.08); opacity:0.40; stroke-width:5;}
+  100%{ transform:scale(1.14); opacity:0;    stroke-width:0;}
+}
+@keyframes rd-check{
+  0%  { stroke-dashoffset:22; opacity:0; }
+  35% { opacity:1; }
+  100%{ stroke-dashoffset:0;  opacity:1; }
+}
+.rd-glow{fill:rgba(42,210,150,0.07);stroke:none;}
+.rd-track{fill:none;stroke:rgba(42,170,142,0.14);stroke-width:1.8;}
+.rd-ring{
+  fill:none;stroke:url(#doneGrad);stroke-width:1.8;stroke-linecap:round;
+  stroke-dasharray:75.4;stroke-dashoffset:75.4;transform-origin:17px 17px;
+  animation:rd-fill .65s cubic-bezier(.4,0,.2,1) forwards;}
+.rd-pulse{
+  fill:none;stroke:rgba(42,200,140,0.55);stroke-width:0;transform-origin:17px 17px;
+  animation:rd-pulse .6s .25s cubic-bezier(.4,0,.2,1) forwards;
+  opacity:0;}
+.rd-check{
+  fill:none;stroke:rgba(200,255,230,0.95);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;
+  stroke-dasharray:22;stroke-dashoffset:22;
+  animation:rd-check .32s .4s cubic-bezier(.4,0,.2,1) forwards;}
+.rd-ring-locked{
+  fill:none;stroke:url(#doneGrad);stroke-width:1.8;stroke-linecap:round;
+  stroke-dasharray:75.4;stroke-dashoffset:0;transform-origin:17px 17px;}
+.rd-check-locked{fill:none;stroke:rgba(180,230,210,0.80);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;}
+
+/* ── MISSED: red rotating comet ring (mirrors pending, red palette) ── */
+.rm-track{fill:none;stroke:rgba(217,79,110,0.12);stroke-width:1.8;}
+.rm-arc{
+  fill:none;stroke:url(#missedGrad);stroke-width:1.8;stroke-linecap:round;
+  stroke-dasharray:44 28;transform-origin:17px 17px;
+  animation:vision-spin 1.8s cubic-bezier(0.4,0,0.6,1) infinite;}
+.rm-glow{
+  fill:none;stroke:rgba(255,100,138,0.70);stroke-width:2.5;stroke-linecap:round;
+  stroke-dasharray:5 67;transform-origin:17px 17px;
+  animation:vision-spin 1.8s cubic-bezier(0.4,0,0.6,1) infinite;
+  filter:blur(2px);}
+
+/* ── LOCKED: thin gray breathing ring + lock glyph ── */
+@keyframes rl-breathe{
+  0%,100%{ opacity:0.45; transform:scale(1);   }
+  50%     { opacity:0.70; transform:scale(1.03);}
+}
+.rl-wrap{transform-origin:17px 17px;animation:rl-breathe 4s ease-in-out infinite;}
+.rl-track{fill:none;stroke:rgba(100,140,200,0.22);stroke-width:1.5;}
+.rl-body{fill:rgba(100,140,200,0.32);}
+.rl-shackle{fill:none;stroke:rgba(130,165,220,0.55);stroke-width:1.5;stroke-linecap:round;}
+
+.placeholder{width:34px;height:34px;flex-shrink:0;}
+
+.tip,.loophole,.subj{
+  margin-bottom:14px;padding:14px 16px;border-radius:16px;
+  font-size:12.5px;color:var(--text-dim);line-height:1.6;
+  background:rgba(6,18,48,0.48)!important;
+  backdrop-filter:saturate(200%) blur(28px)!important;-webkit-backdrop-filter:saturate(200%) blur(28px)!important;
+  border:1px solid rgba(255,255,255,0.08)!important;
+  box-shadow:0 1px 0 rgba(255,255,255,0.06) inset,0 6px 28px rgba(0,0,0,0.35)!important;
+  position:relative;overflow:hidden;}
+.tip::before,.loophole::before,.subj::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.10),transparent);}
+.tip b,.loophole b,.subj b{color:var(--text);}
+.loophole{border-color:rgba(201,137,58,0.16)!important;}
+.loophole-t,.subj-t{font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--amber);margin-bottom:10px;}
+.subj-t{color:var(--teal);}
+.loophole ul{list-style:none;}
+.loophole li{margin-bottom:5px;display:flex;gap:8px;align-items:flex-start;}
+.loophole li::before{content:'⏰';flex-shrink:0;font-size:11px;}
+
+.streak-section{padding-bottom:18px;margin-bottom:16px;}
+.streak-head{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:14px;flex-wrap:wrap;gap:10px;}
+#streak-display{
+  font-family:'Orbitron',sans-serif;font-size:26px;font-weight:700;
+  color:var(--teal);
+  text-shadow:0 0 16px rgba(42,170,142,0.30);
+  display:flex;align-items:center;gap:10px;letter-spacing:1px;}
+.streak-label{font-size:11.5px;color:var(--text-dim);letter-spacing:0.3px;max-width:360px;line-height:1.5;margin-top:4px;}
+
+.heatmap-outer{
+  position:relative;border-radius:14px;
+  background:rgba(4,12,32,0.52);
+  border:1px solid rgba(255,255,255,0.07);
+  box-shadow:0 1px 0 rgba(255,255,255,0.05) inset,0 6px 28px rgba(0,0,0,0.38);
+  overflow:hidden;}
+.hm-sticky{
+  position:absolute;left:0;top:0;bottom:0;width:30px;z-index:20;pointer-events:none;
+  background:linear-gradient(to right,rgba(2,8,23,0.97) 0%,rgba(2,8,23,0.88) 65%,transparent 100%);}
+.hm-sticky-inner{display:flex;flex-direction:column;gap:2px;padding-top:32px;padding-left:4px;}
+.hm-day-lbl{height:11px;font-size:9px;color:var(--text-dim);line-height:11px;letter-spacing:0.3px;font-family:'JetBrains Mono',monospace;}
+.hm-scroll{
+  overflow-x:auto;overflow-y:hidden;scroll-behavior:smooth;
+  padding:14px 20px 12px 34px;cursor:grab;
+  -webkit-overflow-scrolling:touch;user-select:none;}
+.hm-scroll:active{cursor:grabbing;}
+.hm-scroll::-webkit-scrollbar{height:3px;}
+.hm-scroll::-webkit-scrollbar-track{background:rgba(255,255,255,0.02);}
+.hm-scroll::-webkit-scrollbar-thumb{background:rgba(42,170,142,0.18);border-radius:2px;}
+.hm-scroll::-webkit-scrollbar-thumb:hover{background:rgba(42,170,142,0.32);}
+.hm-timeline{display:flex;align-items:flex-start;min-width:max-content;}
+.hm-year-section{display:flex;flex-direction:column;flex-shrink:0;}
+.hm-top-row{height:20px;position:relative;margin-bottom:3px;}
+.hm-month-lbl{position:absolute;top:4px;font-size:9px;color:var(--text-dim);white-space:nowrap;letter-spacing:0.5px;font-family:'JetBrains Mono',monospace;line-height:12px;}
+.hm-year-lbl{
+  position:absolute;top:4px;left:0;
+  font-family:'Orbitron',sans-serif;font-size:8.5px;letter-spacing:1.5px;
+  color:rgba(56,150,212,0.35);text-transform:uppercase;line-height:12px;white-space:nowrap;}
+.hm-cols{display:flex;gap:2px;}
+.hm-col{display:flex;flex-direction:column;gap:2px;}
+.hm-year-divider{
+  width:1px;
+  background:linear-gradient(to bottom,transparent,rgba(56,130,200,0.18),transparent);
+  margin:20px 7px 0;align-self:stretch;flex-shrink:0;}
+
+.gh-cell{
+  width:11px;height:11px;border-radius:2px;
+  background:rgba(15,35,70,0.55);
+  border:1px solid rgba(255,255,255,0.05);
+  flex-shrink:0;transition:transform .1s;cursor:default;}
+/* FIX: contain hover scale to avoid overflow issues */
+.gh-cell:hover{transform:scale(1.5);z-index:10;position:relative;}
+.gh-cell.l1{background:rgba(42,130,100,0.28);border-color:rgba(42,130,100,0.38);}
+.gh-cell.l2{background:rgba(42,160,118,0.48);border-color:rgba(42,160,118,0.60);}
+.gh-cell.l3{background:rgba(42,170,130,0.72);border-color:rgba(42,170,130,0.85);}
+.gh-cell.l4{background:#2aaa8e;border-color:rgba(42,170,142,0.9);box-shadow:0 0 4px rgba(42,170,142,0.35);}
+.gh-cell.future-cell{opacity:0.15;}
+.gh-cell.pad-cell{opacity:0!important;pointer-events:none;}
+
+.gh-legend{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text-dim);justify-content:flex-end;letter-spacing:1px;text-transform:uppercase;margin-top:8px;}
+.gh-legend .gh-cell{width:10px;height:10px;cursor:default;}
+.gh-legend .gh-cell:hover{transform:none;}
+
+/* FIX: tooltip uses fixed positioning which works fine, but ensure visibility */
+.gh-tooltip{
+  position:fixed;z-index:9000;
+  background:rgba(4,12,32,0.96);
+  border:1px solid rgba(56,130,200,0.25);
+  border-radius:8px;padding:6px 10px;
+  font-size:11px;font-family:'JetBrains Mono',monospace;color:#8ec8e8;
+  pointer-events:none;white-space:nowrap;
+  box-shadow:0 4px 20px rgba(0,0,0,0.55);display:none;}
+
+/* ══ EDITOR ══ */
+.edit-btn{
+  font-family:'Orbitron',sans-serif;font-size:10.5px;letter-spacing:1.5px;text-transform:uppercase;
+  padding:8px 14px;border-radius:10px;
+  border:1px solid rgba(56,150,212,0.25);background:rgba(56,150,212,0.06);
+  color:#8ec8e8;cursor:pointer;transition:all .2s;
+  display:flex;align-items:center;gap:6px;}
+.edit-btn:hover{border-color:var(--cyan);box-shadow:0 0 14px rgba(56,150,212,0.18);background:rgba(56,150,212,0.10);}
+.edit-btn svg{width:13px;height:13px;flex-shrink:0;}
+
+.editor-list{display:flex;flex-direction:column;gap:8px;margin-bottom:18px;}
+.editor-row{
+  display:flex;flex-direction:column;gap:10px;
+  padding:14px;border-radius:14px;
+  background:rgba(6,18,48,0.55);border:1px solid rgba(255,255,255,0.08);
+  position:relative;}
+.editor-row-top{display:flex;gap:8px;align-items:center;}
+.editor-row-fields{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.editor-row-fields.full{grid-template-columns:1fr;}
+.ed-field{display:flex;flex-direction:column;gap:4px;}
+.ed-field label{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);}
+.ed-field input,.ed-field select,.ed-field textarea{
+  font-family:'Rajdhani',sans-serif;font-size:13px;color:var(--text);
+  background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.10);
+  border-radius:8px;padding:8px 10px;outline:none;transition:border-color .2s;
+  width:100%;}
+.ed-field input:focus,.ed-field select:focus,.ed-field textarea:focus{border-color:rgba(56,150,212,0.45);}
+.ed-field textarea{resize:vertical;min-height:38px;font-family:'Rajdhani',sans-serif;}
+.ed-field select option{background:#041226;color:#ddeeff;}
+.ed-icon-btn{
+  width:30px;height:30px;border-radius:8px;flex-shrink:0;
+  border:1px solid rgba(255,255,255,0.10);background:rgba(255,255,255,0.04);
+  color:var(--text-dim);cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:all .2s;font-size:14px;}
+.ed-icon-btn:hover{color:var(--text);border-color:rgba(255,255,255,0.22);background:rgba(255,255,255,0.08);}
+.ed-icon-btn.danger:hover{color:var(--red);border-color:var(--red);background:rgba(180,60,80,0.10);}
+.ed-cat-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.ed-add-btn{
+  font-family:'Orbitron',sans-serif;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;
+  padding:12px;border-radius:12px;width:100%;
+  border:1px dashed rgba(56,150,212,0.30);background:rgba(56,150,212,0.05);
+  color:#8ec8e8;cursor:pointer;transition:all .2s;margin-top:4px;}
+.ed-add-btn:hover{border-color:var(--cyan);background:rgba(56,150,212,0.10);}
+.ed-actions-bar{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap;}
+.ed-save-btn,.ed-reset-sched-btn{
+  font-family:'Orbitron',sans-serif;font-size:10.5px;letter-spacing:1.5px;text-transform:uppercase;
+  padding:11px 18px;border-radius:10px;cursor:pointer;transition:all .2s;flex:1;text-align:center;}
+.ed-save-btn{border:1px solid rgba(42,170,142,0.35);background:rgba(42,170,142,0.10);color:var(--teal);}
+.ed-save-btn:hover{box-shadow:0 0 14px rgba(42,170,142,0.18);background:rgba(42,170,142,0.16);}
+.ed-reset-sched-btn{border:1px solid rgba(180,60,80,0.25);background:rgba(180,60,80,0.05);color:var(--red);}
+.ed-reset-sched-btn:hover{box-shadow:0 0 14px rgba(180,60,80,0.15);background:rgba(180,60,80,0.09);}
+.ed-tab-note{font-size:11.5px;color:var(--text-dim);line-height:1.6;margin-bottom:14px;padding:12px 14px;border-radius:12px;background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.06);}
+.ed-tab-note b{color:var(--text);}
+
+/* ══ DAY GROUP MANAGER ══ */
+.dgm-section{margin-bottom:20px;}
+.dgm-header{
+  display:flex;justify-content:space-between;align-items:center;
+  margin-bottom:12px;}
+.dgm-title{
+  font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:2px;
+  text-transform:uppercase;color:var(--cyan);}
+.dgm-add-group-btn{
+  font-family:'Orbitron',sans-serif;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;
+  padding:6px 12px;border-radius:8px;
+  border:1px dashed rgba(56,150,212,0.35);background:rgba(56,150,212,0.06);
+  color:#8ec8e8;cursor:pointer;transition:all .2s;}
+.dgm-add-group-btn:hover{border-color:var(--cyan);background:rgba(56,150,212,0.12);}
+.dgm-group{
+  padding:14px;border-radius:14px;margin-bottom:10px;
+  background:rgba(6,18,48,0.55);border:1px solid rgba(255,255,255,0.08);}
+.dgm-group-header{display:flex;align-items:center;gap:8px;margin-bottom:12px;}
+.dgm-group-name{
+  font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:600;
+  color:var(--text);background:rgba(255,255,255,0.04);
+  border:1px solid rgba(255,255,255,0.10);border-radius:7px;
+  padding:5px 10px;outline:none;flex:1;
+  transition:border-color .2s;}
+.dgm-group-name:focus{border-color:rgba(56,150,212,0.45);}
+.dgm-delete-group-btn{
+  width:28px;height:28px;border-radius:7px;flex-shrink:0;
+  border:1px solid rgba(180,60,80,0.20);background:rgba(180,60,80,0.04);
+  color:var(--red);cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:all .2s;font-size:13px;}
+.dgm-delete-group-btn:hover{border-color:var(--red);background:rgba(180,60,80,0.12);}
+.dgm-days-grid{display:flex;flex-wrap:wrap;gap:6px;}
+.dgm-day-chip{
+  display:flex;align-items:center;gap:6px;
+  padding:5px 11px;border-radius:8px;cursor:pointer;
+  font-size:12px;font-weight:600;letter-spacing:0.3px;
+  transition:all .18s cubic-bezier(.34,1.56,.64,1);
+  border:1px solid rgba(255,255,255,0.10);
+  background:rgba(255,255,255,0.03);color:var(--text-dim);
+  user-select:none;}
+.dgm-day-chip.assigned{
+  background:rgba(56,150,212,0.14);
+  border-color:rgba(56,150,212,0.40);
+  color:#8ec8e8;}
+.dgm-day-chip.assigned:hover{
+  background:rgba(56,150,212,0.22);
+  transform:scale(1.06);}
+.dgm-day-chip:not(.assigned):hover{
+  background:rgba(255,255,255,0.06);
+  border-color:rgba(255,255,255,0.20);
+  color:var(--text);
+  transform:scale(1.04);}
+.dgm-day-chip input[type=checkbox]{display:none;}
+.dgm-chip-check{width:13px;height:13px;border-radius:3px;flex-shrink:0;
+  border:1px solid rgba(255,255,255,0.20);background:rgba(255,255,255,0.04);
+  display:flex;align-items:center;justify-content:center;}
+.dgm-day-chip.assigned .dgm-chip-check{
+  background:var(--cyan);border-color:var(--cyan);}
+.dgm-day-chip.assigned .dgm-chip-check::after{
+  content:'✓';font-size:9px;color:#000;font-weight:700;line-height:1;}
+.dgm-validation-msg{
+  font-size:11.5px;line-height:1.6;padding:10px 13px;border-radius:10px;
+  margin-top:10px;display:none;}
+.dgm-validation-msg.error{
+  display:block;
+  background:rgba(180,60,80,0.10);border:1px solid rgba(180,60,80,0.28);
+  color:var(--red);}
+.dgm-validation-msg.ok{
+  display:block;
+  background:rgba(42,170,142,0.10);border:1px solid rgba(42,170,142,0.28);
+  color:var(--teal);}
+.editor-section-divider{
+  font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:2px;
+  text-transform:uppercase;color:var(--text-dim);
+  padding:10px 0 8px;margin-bottom:10px;
+  border-bottom:1px solid rgba(255,255,255,0.07);}
+
+@media(max-width:480px){
+  .title{font-size:18px;}
+  #streak-display{font-size:22px;}
+  .clock-date{display:none;}
+  .modal-panel{max-height:92vh;}
+  .job-platform-grid{grid-template-columns:1fr 1fr;}
+  /* FIX: better mobile stats grid — 2 cols on small screens */
+  .stats{grid-template-columns:1fr 1fr;}
+  /* FIX: tighter block layout on mobile */
+  .btime{min-width:72px;font-size:9.5px;}
+  .editor-row-fields{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<canvas id="matrix-canvas"></canvas>
+<div class="ambient"></div>
+<div class="gh-tooltip" id="gh-tooltip"></div>
+
+<!-- SVG defs shared across all rings -->
+<svg width="0" height="0" style="position:absolute;overflow:hidden;">
+  <defs>
+    <linearGradient id="cometGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"   stop-color="rgba(56,182,212,0.0)"/>
+      <stop offset="45%"  stop-color="rgba(56,182,212,0.5)"/>
+      <stop offset="100%" stop-color="#5ce8ff"/>
+    </linearGradient>
+    <linearGradient id="missedGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"   stop-color="rgba(217,79,110,0.0)"/>
+      <stop offset="45%"  stop-color="rgba(217,79,110,0.5)"/>
+      <stop offset="100%" stop-color="#ff6a8a"/>
+    </linearGradient>
+    <linearGradient id="doneGrad" gradientUnits="userSpaceOnUse" x1="17" y1="3" x2="17" y2="31">
+      <stop offset="0%"   stop-color="#2adc9e"/>
+      <stop offset="100%" stop-color="#2aaa8e"/>
+    </linearGradient>
+  </defs>
+</svg>
+
+<div class="modal-backdrop" id="modal-backdrop" onclick="closeModalOnBackdrop(event)">
+  <div class="modal-panel" id="modal-panel">
+    <div class="modal-drag"></div>
+    <div class="modal-header">
+      <span class="modal-title" id="modal-title"></span>
+      <button class="modal-close" onclick="closeModal()">&#x2715;</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="header">
+    <div class="title">SCHEDULE<small>Job hunt &amp; SSC CGL ops tracker</small></div>
+    <div class="clock"><div id="analog-clock"><canvas id="analog-canvas" width="26" height="26"></canvas></div><div class="clock-live" id="clock-display"></div></div>
+  </div>
+
+  <div class="topbar">
+    <div class="legend">
+      <span><span class="dot" style="background:var(--blue)"></span>Job hunt</span>
+      <span><span class="dot" style="background:var(--teal)"></span>SSC CGL</span>
+      <span><span class="dot" style="background:var(--purple)"></span>Coding</span>
+      <span><span class="dot" style="background:var(--amber)"></span>Loophole</span>
+      <span><span class="dot" style="background:#3a4a5c"></span>Break</span>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;">
+      <button class="edit-btn" onclick="openEditor()" aria-label="Edit schedule">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        EDIT
+      </button>
+      <button class="reset-btn" onclick="resetData()">&#x27f2; Reset all data</button>
+    </div>
+  </div>
+
+  <div class="tabs" id="tabs"></div>
+  <div class="stats" id="stats"></div>
+  <div class="blocks" id="blocks"></div>
+
+  <div class="streak-section">
+    <div class="streak-head">
+      <div>
+        <div id="streak-display">0 days</div>
+        <div class="streak-label">Tap a block during its window to mark complete. Completed tasks lock after their time window closes. 80%+ daily completion keeps the streak alive.</div>
+      </div>
+    </div>
+    <div class="heatmap-outer" id="heatmap-outer">
+      <div class="hm-sticky">
+        <div class="hm-sticky-inner" id="hm-day-lbls"></div>
+      </div>
+      <div class="hm-scroll" id="hm-scroll">
+        <div class="hm-timeline" id="hm-timeline"></div>
+      </div>
+    </div>
+    <div class="gh-legend">
+      <span>Less</span>
+      <div class="gh-cell"></div>
+      <div class="gh-cell l1"></div>
+      <div class="gh-cell l2"></div>
+      <div class="gh-cell l3"></div>
+      <div class="gh-cell l4"></div>
+      <span>More</span>
+    </div>
+  </div>
+
+  <div id="extra"></div>
+
+  <div id="confirm-overlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(1,5,18,0.82);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);align-items:center;justify-content:center;">
+    <div style="background:rgba(4,12,34,0.97);border:1px solid rgba(180,60,80,0.30);border-radius:18px;padding:28px 32px;max-width:340px;width:90%;box-shadow:0 0 48px rgba(0,0,20,0.8),0 -8px 40px rgba(180,60,80,0.08),0 1px 0 rgba(255,255,255,0.06) inset;text-align:center;">
+      <div style="font-family:'Orbitron',sans-serif;font-size:13px;color:#c94f6e;letter-spacing:2px;margin-bottom:12px;">&#x26a0; CONFIRM RESET</div>
+      <div style="font-size:13px;color:#5a7a9a;line-height:1.6;margin-bottom:24px;" id="confirm-text">Reset ALL tracked progress?<br>This cannot be undone.</div>
+      <div style="display:flex;gap:12px;justify-content:center;">
+        <button onclick="confirmReset(false)" style="font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:1.5px;padding:10px 20px;border-radius:10px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.04);color:#6a8aaa;cursor:pointer;">CANCEL</button>
+        <button onclick="confirmReset(true)" style="font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:1.5px;padding:10px 20px;border-radius:10px;border:1px solid rgba(180,60,80,0.45);background:rgba(180,60,80,0.12);color:#c94f6e;cursor:pointer;">RESET ALL</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ═══ DIGITAL RAIN NEBULA ═══ */
+const RAIN_INTENSITY = 3;
+(function(){
+  const CFG = {
+    1: { count:160, lenMin:20,  lenMax:90,  opMin:0.05, opMax:0.16, wMin:0.4, wMax:1.1, glowR:1.8, glowOp:0.55, orbOp:0.03, brightChance:0.0,  brightMult:1.0 },
+    2: { count:320, lenMin:35,  lenMax:150, opMin:0.12, opMax:0.32, wMin:0.6, wMax:1.5, glowR:2.8, glowOp:0.70, orbOp:0.07, brightChance:0.08, brightMult:2.2 },
+    3: { count:460, lenMin:55,  lenMax:220, opMin:0.22, opMax:0.52, wMin:0.7, wMax:1.8, glowR:4.0, glowOp:0.85, orbOp:0.11, brightChance:0.14, brightMult:3.5 },
+  };
+  const C = CFG[RAIN_INTENSITY] || CFG[3];
+  const canvas=document.getElementById('matrix-canvas'),ctx=canvas.getContext('2d');
+  let W=0,H=0;
+  const COLORS=[[56,180,255],[40,140,240],[80,200,255],[42,160,210],[100,180,255],[60,120,220],[30,90,180],[20,70,160]];
+  function rand(a,b){return a+Math.random()*(b-a);}
+  function mkStreak(){
+    const col=COLORS[Math.floor(Math.random()*COLORS.length)];
+    const len=rand(C.lenMin,C.lenMax);
+    const isBright=Math.random()<C.brightChance;
+    const baseOp=isBright?rand(C.opMin*C.brightMult,C.opMax*C.brightMult):rand(C.opMin,C.opMax);
+    return{x:rand(0,W||1200),y:rand(-len,H||800),vy:rand(0.25,1.1),len,op:0,fade:rand(0.004,0.012),fadingIn:true,targetOp:Math.min(baseOp,0.72),col,width:isBright?rand(C.wMin*1.4,C.wMax*1.6):rand(C.wMin,C.wMax),phase:rand(0,Math.PI*2),bright:isBright};}
+  const ORB_COUNT=RAIN_INTENSITY===3?9:RAIN_INTENSITY===2?7:5;
+  function mkOrb(){const col=COLORS[Math.floor(Math.random()*COLORS.length)];return{x:rand(0,W||1200),y:rand(0,H||800),r:rand(100,280),op:rand(C.orbOp*0.6,C.orbOp),phase:rand(0,Math.PI*2),speed:rand(0.0004,0.0014),col};}
+  let streaks=[],orbs=[];
+  function init(){W=canvas.width=window.innerWidth;H=canvas.height=window.innerHeight;streaks=Array.from({length:C.count},mkStreak);orbs=Array.from({length:ORB_COUNT},mkOrb);streaks.forEach(s=>{s.y=rand(-s.len,H);s.op=rand(0,s.targetOp*0.5);s.fadingIn=true;});}
+  init();
+  window.addEventListener('resize',()=>{W=canvas.width=window.innerWidth;H=canvas.height=window.innerHeight;orbs.forEach(o=>{o.x=rand(0,W);o.y=rand(0,H);});});
+  let t=0;
+  function draw(){
+    ctx.clearRect(0,0,W,H);t+=0.012;
+    if(W>0&&H>0) orbs.forEach(o=>{
+      const pulse=o.op*(0.65+0.35*Math.sin(t*o.speed*600+o.phase));
+      const g=ctx.createRadialGradient(o.x,o.y,0,o.x,o.y,o.r);
+      g.addColorStop(0,`rgba(${o.col[0]},${o.col[1]},${o.col[2]},${pulse})`);
+      g.addColorStop(1,`rgba(${o.col[0]},${o.col[1]},${o.col[2]},0)`);
+      ctx.fillStyle=g;ctx.fillRect(o.x-o.r,o.y-o.r,o.r*2,o.r*2);
+      o.x+=Math.sin(t*o.speed+o.phase)*0.14;o.y+=Math.cos(t*o.speed+o.phase)*0.09;
+      if(o.x<-o.r)o.x=W+o.r;if(o.x>W+o.r)o.x=-o.r;if(o.y<-o.r)o.y=H+o.r;if(o.y>H+o.r)o.y=-o.r;});
+    streaks.forEach(s=>{
+      if(s.fadingIn){s.op+=s.fade;if(s.op>=s.targetOp){s.op=s.targetOp;s.fadingIn=false;}}else{s.op-=s.fade*0.55;}
+      s.y+=s.vy;s.x+=Math.sin(t*0.35+s.phase)*0.09;
+      if(s.y>H+s.len||s.op<=0){Object.assign(s,mkStreak());s.y=-s.len-rand(0,80);s.x=rand(0,W);s.op=0;s.fadingIn=true;}
+      if(s.op<=0||!H||!W) return;
+      const headY=s.y,tailY=s.y-s.len;
+      const lg=ctx.createLinearGradient(s.x,tailY,s.x,headY);
+      lg.addColorStop(0,`rgba(${s.col[0]},${s.col[1]},${s.col[2]},0)`);
+      lg.addColorStop(0.5,`rgba(${s.col[0]},${s.col[1]},${s.col[2]},${s.op*0.4})`);
+      lg.addColorStop(1,`rgba(${s.col[0]},${s.col[1]},${s.col[2]},${s.op})`);
+      ctx.strokeStyle=lg;ctx.lineWidth=s.width;ctx.beginPath();ctx.moveTo(s.x,tailY);ctx.lineTo(s.x,headY);ctx.stroke();
+      if(s.op>0.05){
+        const glowOp=s.bright?s.op*C.glowOp*1.3:s.op*C.glowOp;
+        const glowR=s.bright?C.glowR*1.8:C.glowR;
+        const halo=ctx.createRadialGradient(s.x,headY,0,s.x,headY,glowR*2.5);
+        halo.addColorStop(0,`rgba(${s.col[0]},${s.col[1]},${s.col[2]},${glowOp*0.55})`);
+        halo.addColorStop(1,`rgba(${s.col[0]},${s.col[1]},${s.col[2]},0)`);
+        ctx.fillStyle=halo;ctx.fillRect(s.x-glowR*2.5,headY-glowR*2.5,glowR*5,glowR*5);
+        ctx.beginPath();ctx.arc(s.x,headY,glowR*0.55,0,Math.PI*2);
+        ctx.fillStyle=`rgba(${s.col[0]},${s.col[1]},${s.col[2]},${glowOp})`;ctx.fill();}});
+  }
+  setInterval(draw,40);
+})();
+
+/* ═══ ANALOG MINI-CLOCK ═══ */
+(function(){
+  const c=document.getElementById('analog-canvas');
+  if(!c)return;
+  const ctx=c.getContext('2d');
+  const S=26, CX=S/2, CY=S/2, CR=S/2-1.5;
+  function drawHand(angleDeg, length, width, color){
+    const rad = (angleDeg - 90) * Math.PI / 180;
+    ctx.save();ctx.beginPath();ctx.moveTo(CX, CY);
+    ctx.lineTo(CX + Math.cos(rad) * length, CY + Math.sin(rad) * length);
+    ctx.strokeStyle = color;ctx.lineWidth = width;ctx.lineCap = 'round';ctx.stroke();ctx.restore();}
+  function drawClock(){
+    const now = new Date();
+    const h=now.getHours(),m=now.getMinutes(),s=now.getSeconds();
+    const hourAngle   = (h % 12) * 30 + m * 0.5;
+    const minuteAngle = m * 6 + s * 0.1;
+    const secondAngle = s * 6;
+    ctx.clearRect(0, 0, S, S);
+    const bg = ctx.createRadialGradient(CX, CY-2, 0, CX, CY, CR);
+    bg.addColorStop(0, 'rgba(30,60,120,0.72)');bg.addColorStop(1, 'rgba(8,20,55,0.85)');
+    ctx.beginPath(); ctx.arc(CX, CY, CR, 0, Math.PI*2);ctx.fillStyle = bg; ctx.fill();
+    ctx.beginPath(); ctx.arc(CX, CY, CR, 0, Math.PI*2);ctx.strokeStyle='rgba(80,150,230,0.30)'; ctx.lineWidth=0.8; ctx.stroke();
+    for(let i=0;i<4;i++){const a = (i/4)*Math.PI*2 - Math.PI/2;ctx.beginPath();ctx.arc(CX+Math.cos(a)*(CR-2.2), CY+Math.sin(a)*(CR-2.2), 0.8, 0, Math.PI*2);ctx.fillStyle='rgba(100,170,240,0.55)'; ctx.fill();}
+    drawHand(hourAngle,   CR*0.52, 1.4, 'rgba(180,220,255,0.90)');
+    drawHand(minuteAngle, CR*0.74, 0.9, 'rgba(140,200,255,0.80)');
+    drawHand(secondAngle, CR*0.82, 0.6, 'rgba(42,170,200,0.70)');
+    ctx.beginPath(); ctx.arc(CX, CY, 1.4, 0, Math.PI*2);ctx.fillStyle='rgba(120,190,255,0.95)'; ctx.fill();
+    const glare=ctx.createLinearGradient(CX-CR*0.5,CY-CR,CX-CR*0.5,CY);
+    glare.addColorStop(0,'rgba(255,255,255,0.10)');glare.addColorStop(1,'rgba(255,255,255,0)');
+    ctx.beginPath(); ctx.arc(CX, CY, CR, 0, Math.PI*2);ctx.fillStyle=glare; ctx.fill();}
+  drawClock();setInterval(drawClock, 1000);
+})();
+
+/* ═══ DIGITAL CLOCK ═══ */
+const clockEl=document.getElementById('clock-display');
+let prevH=-1,prevM=-1;
+function makeSlot(id,v){const w=document.createElement('span');w.className='digit-slot';w.id='ds-'+id;const inn=document.createElement('span');inn.className='digit-inner';inn.id='di-'+id;for(let d=0;d<=9;d++){const s=document.createElement('span');s.textContent=d;inn.appendChild(s);}inn.style.transform=`translateY(-${v*1.2}em)`;w.appendChild(inn);return w;}
+function buildClock(){const n=new Date();let h=n.getHours();const ap=h>=12?'PM':'AM';h=h%12||12;const m=n.getMinutes(),s=n.getSeconds();clockEl.innerHTML='';clockEl.appendChild(makeSlot('h1',Math.floor(h/10)));clockEl.appendChild(makeSlot('h2',h%10));const s1=document.createElement('span');s1.className='clock-sep';s1.textContent=':';clockEl.appendChild(s1);clockEl.appendChild(makeSlot('m1',Math.floor(m/10)));clockEl.appendChild(makeSlot('m2',m%10));const s2=document.createElement('span');s2.className='clock-sep';s2.textContent=':';clockEl.appendChild(s2);clockEl.appendChild(makeSlot('s1',Math.floor(s/10)));clockEl.appendChild(makeSlot('s2',s%10));const ae=document.createElement('span');ae.className='clock-ampm';ae.textContent=ap;clockEl.appendChild(ae);const de=document.createElement('span');de.className='clock-date';de.id='clock-date';de.textContent=n.toLocaleDateString('en-IN',{day:'numeric',month:'short',weekday:'short'});clockEl.appendChild(de);prevH=h;prevM=m;}
+/* FIX: null guard in rollDigit */
+function rollDigit(id,v){const el=document.getElementById('di-'+id);if(el)el.style.transform=`translateY(-${v*1.2}em)`;}
+function updateClock(){const n=new Date();let h=n.getHours();const ap=h>=12?'PM':'AM';h=h%12||12;const m=n.getMinutes(),s=n.getSeconds();if(prevH!==h){rollDigit('h1',Math.floor(h/10));rollDigit('h2',h%10);prevH=h;}if(prevM!==m){rollDigit('m1',Math.floor(m/10));rollDigit('m2',m%10);prevM=m;const de=document.getElementById('clock-date');if(de)de.textContent=n.toLocaleDateString('en-IN',{day:'numeric',month:'short',weekday:'short'});}rollDigit('s1',Math.floor(s/10));rollDigit('s2',s%10);}
+
+/* ═══ QUOTES ═══ */
+const QUOTES=["Discipline beats motivation.","Small progress every day compounds.","Consistency creates opportunities.","Do the work even when you don't feel like it.","Success is earned daily.","The grind is the goal.","One more application. One more question.","Future you is watching. Don't embarrass him.","Comfort is the enemy of achievement.","Show up. Every single day.","Results don't care about your mood.","Be the person who didn't quit.","Hard work quietly defeats talent.","Every expert was once a beginner.","The gap between where you are and where you want to be is called work.","Stack small wins. Build momentum.","Tired is temporary. Regret lasts forever.","Your future self is built today.","No shortcuts. No excuses. No regrets.","Pressure creates diamonds.","One focused hour beats five distracted ones.","Chase progress, not perfection.","Rejection is redirection.","The best time to start was yesterday. The next best time is now.","Outwork your doubts.","Make today's effort tomorrow's advantage.","Ambition without action is daydreaming.","Every no is closer to a yes.","Earn the right to rest.","Mission incomplete. Keep going."];
+const QUOTE_STORE_KEY='mc_quote_state_v1';
+function getQuoteState(){try{const r=localStorage.getItem(QUOTE_STORE_KEY);if(r){const p=JSON.parse(r);if(p&&typeof p.idx==='number'&&p.ts)return p;}}catch(e){}return{idx:0,ts:Date.now()};}
+function saveQuoteState(s){try{localStorage.setItem(QUOTE_STORE_KEY,JSON.stringify(s));}catch(e){}}
+function getCurrentQuote(){let state=getQuoteState();const now=Date.now();const hoursPassed=Math.floor((now-state.ts)/(1000*60*60));if(hoursPassed>0){state.idx=(state.idx+hoursPassed)%QUOTES.length;state.ts=state.ts+(hoursPassed*60*60*1000);saveQuoteState(state);}return{idx:state.idx,quote:QUOTES[state.idx]};}
+function getMinutesUntilNextQuote(){const state=getQuoteState();const now=Date.now();const msUntilNext=3600000-((now-state.ts)%3600000);return Math.ceil(msUntilNext/60000);}
+
+/* ═══ APP DATA (DEFAULTS — DO NOT MUTATE DIRECTLY) ═══ */
+/* Default group config: maps group name → array of JS day-of-week indices (0=Sun) */
+const DEFAULT_DAY_GROUPS={
+  "Mon / Wed / Fri": [1,3,5],
+  "Tue / Thu":       [2,4],
+  "Saturday":        [6],
+  "Sunday":          [0]
+};
+const GROUP_CONFIG_KEY="sched_groups_v1";
+function deepCloneGroups(g){const out={};Object.keys(g).forEach(k=>{out[k]=[...g[k]];});return out;}
+function loadDayGroups(){
+  try{const r=localStorage.getItem(GROUP_CONFIG_KEY);if(r){const p=JSON.parse(r);if(p&&typeof p==="object"&&Object.keys(p).length>0)return p;}}catch(e){}
+  return deepCloneGroups(DEFAULT_DAY_GROUPS);
+}
+function saveDayGroups(){try{localStorage.setItem(GROUP_CONFIG_KEY,JSON.stringify(dayGroups));}catch(e){}}
+let dayGroups=loadDayGroups();
+/* Build DAY_TYPE map from group config: dayIndex -> groupName */
+function buildDayTypeMap(groups){const map={};Object.keys(groups).forEach(name=>{groups[name].forEach(d=>{map[d]=name;});});return map;}
+let DAY_TYPE=buildDayTypeMap(dayGroups);
+const TRACKED=new Set(["ssc","job","code","loop"]);
+
+const DEFAULT_D={
+  "Mon / Wed / Fri":{focus:"Job hunting + SSC practice",job:5,ssc:7,code:1,
+    tip:"<b>Platform rotation:</b> Mon → LinkedIn + Naukri. Wed → Wellfound + Foundit + Internshala. Fri → company career pages (Zoho, Freshworks, TCS NextStep). Quality over quantity — 15–20 targeted applications.",
+    loopholes:["8:50–9:10 AM — <b>Naukri profile refresh</b> (boosts visibility in recruiter searches)","1:50–2:00 PM — <b>LinkedIn Open to Work toggle refresh</b> + engage with 1 post","6:50–7:00 PM — <b>Evening re-check:</b> new postings often go live 6–8 PM IST"],
+    subj:"Mon → <b>Quantitative Aptitude</b> &nbsp;|&nbsp; Wed → <b>English</b> &nbsp;|&nbsp; Fri → <b>Quant + Reasoning (mixed)</b>",
+    blocks:[
+      {s:"06:00",e:"06:30",ti:"Morning routine",d:"Freshen up, light stretch",c:"brk"},
+      {s:"06:30",e:"08:00",ti:"SSC CGL – YouTube lecture",d:"90 min on today's subject. Notes compulsory.",c:"ssc"},
+      {s:"08:00",e:"08:30",ti:"Breakfast",d:"",c:"brk"},
+      {s:"08:30",e:"08:50",ti:"SSC CGL – quick PYQ warm-up",d:"20 min, 15 questions on today's topic",c:"ssc"},
+      {s:"08:50",e:"09:10",ti:"Naukri profile refresh (loophole)",d:"Update profile summary/skills + re-save resume.",c:"loop"},
+      {s:"09:10",e:"11:10",ti:"Job applications – platform sprint",d:"15-20 quality applications via ApplyAI. Python / backend / ML / junior SWE only.",c:"job"},
+      {s:"11:10",e:"12:40",ti:"SSC CGL – PYQ practice",d:"90 min solving 50-60 questions on same topic. Timed.",c:"ssc"},
+      {s:"12:40",e:"13:40",ti:"Lunch",d:"",c:"brk"},
+      {s:"13:40",e:"13:50",ti:"SSC quick revision",d:"10 min flashcard flip",c:"ssc"},
+      {s:"13:50",e:"14:00",ti:"LinkedIn refresh (loophole)",d:"Toggle Open to Work + engage with 1 post.",c:"loop"},
+      {s:"14:00",e:"15:30",ti:"SSC CGL – PYQ mock",d:"45-question mini mock. Review every wrong answer.",c:"ssc"},
+      {s:"15:30",e:"17:00",ti:"Resume customisation + career pages",d:"Run ScreenAI on top 3 JDs. Tailor resume. Apply to company portals.",c:"job"},
+      {s:"17:00",e:"17:30",ti:"Break / walk",d:"",c:"brk"},
+      {s:"17:30",e:"18:50",ti:"SSC CGL – revision + flashcards",d:"Revise day's notes. Formula sheet. Flashcards.",c:"ssc"},
+      {s:"18:50",e:"19:00",ti:"Evening job re-check (loophole)",d:"Scan + apply to 2-3 fresh postings.",c:"loop"},
+      {s:"19:00",e:"20:00",ti:"Recruiter follow-ups + networking",d:"Connection requests to HRs. Check email callbacks.",c:"job"},
+      {s:"20:00",e:"20:30",ti:"Dinner break",d:"",c:"brk"},
+      {s:"20:30",e:"21:30",ti:"Coding / project work",d:"Python, SQL, DSA, REST API, FastAPI.",c:"code"},
+      {s:"21:30",e:"23:00",ti:"Free / wind down",d:"",c:"brk"},
+      {s:"23:00",e:"06:00",ti:"Sleep",d:"Lights out — 7 hours target",c:"brk"},
+    ]
+  },
+  "Tue / Thu":{focus:"SSC intensive + job maintenance",job:4,ssc:7,code:1,
+    tip:"<b>Lighter job day:</b> Maintenance applications only (8–10). 70% of SSC time should be solving questions, not watching videos.",
+    loopholes:["8:50–9:00 AM — <b>Naukri profile refresh</b>","1:50–2:00 PM — <b>Withdraw stale applications</b>","6:50–7:00 PM — <b>Evening posting check</b>"],
+    subj:"Tue → <b>Reasoning</b> &nbsp;|&nbsp; Thu → <b>General Awareness + Current Affairs</b>",
+    blocks:[
+      {s:"06:00",e:"06:30",ti:"Morning routine",d:"",c:"brk"},
+      {s:"06:30",e:"08:30",ti:"SSC CGL – 2 lectures + notes",d:"2 x 60-min YouTube videos. Dense notes.",c:"ssc"},
+      {s:"08:30",e:"08:50",ti:"Breakfast",d:"",c:"brk"},
+      {s:"08:50",e:"09:00",ti:"Naukri profile refresh (loophole)",d:"Quick edit + re-save.",c:"loop"},
+      {s:"09:00",e:"11:00",ti:"SSC PYQ practice",d:"70-80 questions. Track accuracy %.",c:"ssc"},
+      {s:"11:00",e:"13:00",ti:"Job applications – maintenance",d:"Apply to 8-10 roles. Check inbox.",c:"job"},
+      {s:"13:00",e:"13:50",ti:"Lunch",d:"",c:"brk"},
+      {s:"13:50",e:"14:00",ti:"Application cleanup (loophole)",d:"Withdraw stale/ignored applications.",c:"loop"},
+      {s:"14:00",e:"16:00",ti:"Deep SSC subject study",d:"NCERT / Lucent / R.S. Aggarwal on weakest topic.",c:"ssc"},
+      {s:"16:00",e:"16:30",ti:"Break",d:"",c:"brk"},
+      {s:"16:30",e:"17:30",ti:"Job applications – round 2",d:"Apply remaining roles. Update skills section.",c:"job"},
+      {s:"17:30",e:"18:50",ti:"SSC revision + formula drills",d:"Flashcards, formula sheet.",c:"ssc"},
+      {s:"18:50",e:"19:00",ti:"Evening job re-check (loophole)",d:"Scan fresh postings, apply 1-2.",c:"loop"},
+      {s:"19:00",e:"19:30",ti:"Dinner break",d:"",c:"brk"},
+      {s:"19:30",e:"20:30",ti:"Python / SQL / DSA practice",d:"LeetCode or FastAPI / SQL exercise.",c:"code"},
+      {s:"20:30",e:"21:30",ti:"SSC current affairs + vocabulary",d:"30 min current affairs + 30 min vocab.",c:"ssc"},
+      {s:"21:30",e:"23:00",ti:"Free / wind down",d:"",c:"brk"},
+      {s:"23:00",e:"06:00",ti:"Sleep",d:"Lights out — 7 hours target",c:"brk"},
+    ]
+  },
+  "Saturday":{focus:"Mock test + bulk applications",job:5.5,ssc:7,code:1,
+    tip:"<b>Saturday rule:</b> Full mock in exam conditions. Analyse every wrong answer first. Target niche boards: Cutshort, HackerEarth Jobs, Wellfound, Y Combinator jobs.",
+    loopholes:["8:50–9:00 AM — <b>Naukri profile refresh</b>","1:50–2:00 PM — <b>Update LinkedIn Featured section</b>","6:50–7:00 PM — <b>Saturday-prep posting check</b>"],
+    blocks:[
+      {s:"07:00",e:"07:30",ti:"Morning routine",d:"",c:"brk"},
+      {s:"07:30",e:"09:30",ti:"SSC CGL – full mock test",d:"2-hr timed mock. Exam conditions.",c:"ssc"},
+      {s:"09:30",e:"10:30",ti:"Mock analysis",d:"Review every wrong answer. Log weak topics.",c:"ssc"},
+      {s:"10:30",e:"11:00",ti:"Breakfast",d:"",c:"brk"},
+      {s:"11:00",e:"11:10",ti:"Naukri/LinkedIn refresh (loophole)",d:"Quick profile touch-up.",c:"loop"},
+      {s:"11:10",e:"13:50",ti:"Bulk job applications",d:"Niche boards – target 20+ apps.",c:"job"},
+      {s:"13:50",e:"14:00",ti:"LinkedIn Featured update (loophole)",d:"Refresh featured section.",c:"loop"},
+      {s:"14:00",e:"15:00",ti:"Lunch",d:"",c:"brk"},
+      {s:"15:00",e:"17:00",ti:"SSC weak topic remediation",d:"Drill lowest-scoring section from mock.",c:"ssc"},
+      {s:"17:00",e:"17:30",ti:"Break",d:"",c:"brk"},
+      {s:"17:30",e:"18:50",ti:"SSC revision",d:"Flashcards, formula sheet, vocabulary.",c:"ssc"},
+      {s:"18:50",e:"19:00",ti:"Saturday eve posting check (loophole)",d:"Scan for Monday-opening listings, apply 2-3.",c:"loop"},
+      {s:"19:00",e:"20:00",ti:"Resume / GitHub / portfolio update",d:"Push commits, update README, run ScreenAI.",c:"job"},
+      {s:"20:00",e:"21:00",ti:"Python project work",d:"Add feature to ScreenAI / ApplyAI / resume project.",c:"code"},
+      {s:"21:00",e:"23:00",ti:"Evening – relax / family time",d:"",c:"brk"},
+      {s:"23:00",e:"07:00",ti:"Sleep",d:"Lights out — 8 hours target",c:"brk"},
+    ]
+  },
+  "Sunday":{focus:"Review, planning + recovery",job:4,ssc:5,code:0,
+    tip:"<b>Sunday reset:</b> Review application tracker – applied, callbacks, OA given. Plan next week's platform list and SSC topic rotation.",
+    loopholes:["8:50–9:00 AM — <b>Naukri profile refresh</b> (sets up Monday AM visibility)","1:50–2:00 PM — <b>Set job alerts for the week</b>"],
+    blocks:[
+      {s:"08:00",e:"08:50",ti:"Slow morning",d:"No rush",c:"brk"},
+      {s:"08:50",e:"09:00",ti:"Naukri profile refresh (loophole)",d:"Sets up Monday AM visibility.",c:"loop"},
+      {s:"09:00",e:"11:00",ti:"SSC weekly revision",d:"Revise all week's topics. Flashcards only.",c:"ssc"},
+      {s:"11:00",e:"13:00",ti:"Job tracker review + applications",d:"Update spreadsheet. Apply to 6-8 roles.",c:"job"},
+      {s:"13:00",e:"13:50",ti:"Lunch",d:"",c:"brk"},
+      {s:"13:50",e:"14:00",ti:"Job alerts setup (loophole)",d:"Refresh job alert keywords.",c:"loop"},
+      {s:"14:00",e:"15:30",ti:"SSC current affairs + GK",d:"Read 1 month of current affairs.",c:"ssc"},
+      {s:"15:30",e:"17:00",ti:"Job applications – round 2 + plan next week",d:"Apply to 4-6 roles. Set platform targets.",c:"job"},
+      {s:"17:00",e:"18:30",ti:"SSC mixed PYQ practice",d:"Light 1.5 hr practice across all subjects.",c:"ssc"},
+      {s:"18:30",e:"23:00",ti:"Rest / personal time",d:"",c:"brk"},
+      {s:"23:00",e:"06:00",ti:"Sleep",d:"Lights out — 7 hours target",c:"brk"},
+    ]
+  }
+};
+
+/* ═══ SCHEDULE PERSISTENCE ═══ */
+const SCHEDULE_STORE_KEY='sched_data_v1';
+function deepClone(o){return JSON.parse(JSON.stringify(o));}
+function loadSchedule(){
+  try{
+    const r=localStorage.getItem(SCHEDULE_STORE_KEY);
+    if(r){const parsed=JSON.parse(r);if(parsed&&typeof parsed==='object')return parsed;}
+  }catch(e){}
+  return deepClone(DEFAULT_D);
+}
+function saveSchedule(){try{localStorage.setItem(SCHEDULE_STORE_KEY,JSON.stringify(D));}catch(e){}}
+let D=loadSchedule();
+/* ensure all default day-keys exist even if older saved data is missing some */
+Object.keys(DEFAULT_D).forEach(k=>{if(!D[k])D[k]=deepClone(DEFAULT_D[k]);if(!Array.isArray(D[k].blocks))D[k].blocks=[];});
+/* ensure group keys exist in D — new groups created by user get a clone of closest DEFAULT_D entry or empty */
+function ensureGroupKeysInD(){
+  Object.keys(dayGroups).forEach(groupName=>{
+    if(!D[groupName]){
+      /* find a matching DEFAULT_D key or use first available */
+      const base=DEFAULT_D[groupName]||DEFAULT_D[Object.keys(DEFAULT_D)[0]];
+      D[groupName]=deepClone(base);
+    }
+    if(!Array.isArray(D[groupName].blocks))D[groupName].blocks=[];
+  });
+}
+ensureGroupKeysInD();
+
+const STORE_KEY='sched_tracker_v4';
+function loadStore(){try{const r=localStorage.getItem(STORE_KEY);return r?JSON.parse(r):{}}catch(e){return{}}}
+function saveStore(s){try{localStorage.setItem(STORE_KEY,JSON.stringify(s))}catch(e){}}
+let store=loadStore();
+
+function todayKey(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function parseLocalDate(key){const[y,m,d]=key.split('-').map(Number);return new Date(y,m-1,d);}
+function toMinutes(hhmm){const[h,m]=hhmm.split(':').map(Number);return h*60+m;}
+function fmtTime(hhmm){const[h,m]=hhmm.split(':').map(Number);const h12=h%12||12;return h12+':'+String(m).padStart(2,'0')+(h<12?' AM':' PM');}
+
+let now=new Date();
+let todayK=todayKey(now);
+let todayDayType=DAY_TYPE[now.getDay()]||Object.keys(dayGroups)[0];
+let nowMin=now.getHours()*60+now.getMinutes();
+function getKeys(){return Object.keys(dayGroups);}
+let active=todayDayType;
+
+/* ═══ MODAL ═══ */
+function openModal(titleText,bodyHTML,accentColor){document.getElementById('modal-title').textContent=titleText;document.getElementById('modal-title').style.color=accentColor||'var(--cyan)';document.getElementById('modal-body').innerHTML=bodyHTML;const bd=document.getElementById('modal-backdrop');bd.style.display='flex';requestAnimationFrame(()=>bd.classList.add('open'));document.body.style.overflow='hidden';}
+function closeModal(){const bd=document.getElementById('modal-backdrop');bd.classList.remove('open');setTimeout(()=>{bd.style.display='none';document.body.style.overflow='';},400);}
+function closeModalOnBackdrop(e){if(e.target===document.getElementById('modal-backdrop'))closeModal();}
+
+function openSSCPanel(){
+  const sections=[
+    {t:'Quantitative Aptitude',cls:'qa',num:'01',topics:['Number System','Percentage','Profit & Loss','Ratio & Proportion','Time & Work','Time, Speed & Distance','Algebra','Geometry','Mensuration','Trigonometry','Statistics','Data Interpretation']},
+    {t:'General Intelligence & Reasoning',cls:'gi',num:'02',topics:['Analogy','Classification','Coding-Decoding','Blood Relations','Direction Sense','Series','Venn Diagrams','Syllogism','Non-verbal Reasoning','Puzzles']},
+    {t:'English Language',cls:'en',num:'03',topics:['Grammar','Vocabulary','Synonyms','Antonyms','Cloze Test','Reading Comprehension','Error Spotting','Sentence Improvement']},
+    {t:'General Awareness',cls:'ga',num:'04',topics:['History','Geography','Polity','Economy','Science','Current Affairs','Static GK']},
+  ];
+  const html=sections.map(s=>`<div class="ssc-section"><div class="ssc-section-title ${s.cls}"><span class="ssc-num">${s.num}</span>${s.t}<span style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:9px;opacity:0.5">${s.topics.length} topics</span></div><div class="ssc-topics">${s.topics.map(t=>`<span class="ssc-tag ${s.cls}">${t}</span>`).join('')}</div></div>`).join('');
+  openModal('SSC CGL TIER-1 SYLLABUS',html,'var(--teal)');}
+
+function openJobPanel(){
+  const platforms=[
+    {name:'LinkedIn',sub:'Top recruiter reach',icon:'💼',url:'https://linkedin.com/jobs'},
+    {name:'Naukri',sub:'India #1',icon:'🔍',url:'https://naukri.com'},
+    {name:'Foundit',sub:'Formerly Monster',icon:'🎯',url:'https://foundit.in'},
+    {name:'Wellfound',sub:'Startups & tech',icon:'🚀',url:'https://wellfound.com'},
+    {name:'Internshala',sub:'Internships + jobs',icon:'🎓',url:'https://internshala.com'},
+    {name:'Cutshort',sub:'Tech-focused',icon:'⚡',url:'https://cutshort.io'},
+    {name:'Indeed',sub:'Global listings',icon:'🌐',url:'https://indeed.co.in'},
+    {name:'Glassdoor',sub:'Reviews + jobs',icon:'🏢',url:'https://glassdoor.co.in'},
+    {name:'Hirist',sub:'Tech jobs India',icon:'💻',url:'https://hirist.tech'},
+    {name:'HackerEarth Jobs',sub:'Dev-specific',icon:'🛠️',url:'https://hackerearth.com/jobs'},
+    {name:'Instahyre',sub:'AI-matched roles',icon:'🤖',url:'https://instahyre.com'},
+    {name:'Freshersworld',sub:'Entry-level',icon:'🌱',url:'https://freshersworld.com'},
+    {name:'TimesJobs',sub:'Broad reach',icon:'📰',url:'https://timesjobs.com'},
+    {name:'Shine',sub:'Mid-segment',icon:'✨',url:'https://shine.com'},
+    {name:'Apna',sub:'Blue + white collar',icon:'📱',url:'https://apna.co'},
+  ];
+  const cards=platforms.map(p=>`<a class="job-card" href="${p.url}" target="_blank" rel="noopener"><div class="job-card-icon">${p.icon}</div><div><div class="job-card-name">${p.name}</div><div class="job-card-sub">${p.sub}</div></div></a>`).join('');
+  const html=`<div class="job-section-head">Job Portals</div><div class="job-platform-grid">${cards}</div><div class="job-section-head" style="margin-top:8px;">Direct Company Career Pages</div><div class="job-careers-box"><b>Check company career pages daily and apply directly whenever possible.</b><br><br>Direct applications bypass ATS filters and are seen by hiring managers faster.</div>`;
+  openModal('JOB HUNT PLATFORMS',html,'var(--blue)');}
+
+function openCodingPanel(){
+  const cats=[
+    {t:'DSA Practice',cls:'',platforms:['LeetCode','HackerRank','Codeforces','CodeChef','HackerEarth','Coding Ninjas']},
+    {t:'SQL Practice',cls:'sql',platforms:['LeetCode SQL','HackerRank SQL','GeeksforGeeks SQL','Coderbyte']},
+    {t:'Python Practice',cls:'py',platforms:['Exercism','HackerRank Python','GeeksforGeeks','Coderbyte']},
+    {t:'Interview Preparation',cls:'iv',platforms:['InterviewBit','GeeksforGeeks','LeetCode Explore','Coding Ninjas Studio']},
+  ];
+  const html=cats.map(cat=>`<div class="code-category"><div class="code-cat-title">${cat.t}</div><div class="code-platform-list">${cat.platforms.map(p=>`<div class="code-badge ${cat.cls}"><span class="code-dot"></span>${p}</div>`).join('')}</div></div>`).join('');
+  openModal('CODING PLATFORMS',html,'var(--purple)');}
+
+function openQuotePanel(){
+  const{idx,quote}=getCurrentQuote();const mins=getMinutesUntilNextQuote();
+  const listItems=QUOTES.map((q,i)=>`<div class="quote-item${i===idx?' active-q':''}"><span class="quote-num">${String(i+1).padStart(2,'0')}</span><span>${q}</span></div>`).join('');
+  const html=`<div class="quote-big">${quote}</div><div class="quote-timer"><span class="quote-timer-dot"></span>Next quote in ${mins} min &nbsp;·&nbsp; Quote ${idx+1} of ${QUOTES.length}</div><div class="quote-all-title">All 30 quotes</div><div class="quote-list">${listItems}</div>`;
+  openModal('MOTIVATIONAL QUOTES',html,'var(--amber)');}
+
+/* ═══ VISIONOS RING BUILDERS ═══ */
+
+function ringOpen(){
+  return `<svg class="ring-svg" viewBox="0 0 34 34" xmlns="http://www.w3.org/2000/svg">
+    <circle class="ro-track" cx="17" cy="17" r="14"/>
+    <circle class="ro-glow"  cx="17" cy="17" r="14" transform="rotate(-90 17 17)"/>
+    <circle class="ro-arc"   cx="17" cy="17" r="14" transform="rotate(-90 17 17)"/>
+  </svg>`;}
+
+/* FIX: added r="14" attribute to rd-glow and rd-pulse circles for cross-browser SVG compatibility */
+function ringDone(locked){
+  if(locked){
+    return `<svg class="ring-svg" viewBox="0 0 34 34" xmlns="http://www.w3.org/2000/svg">
+      <circle class="rd-glow"  cx="17" cy="17" r="14"/>
+      <circle class="rd-track" cx="17" cy="17" r="14"/>
+      <circle class="rd-ring-locked" cx="17" cy="17" r="14" transform="rotate(-90 17 17)"/>
+      <polyline class="rd-check-locked" points="11.5,17 15,20.5 22.5,13"/>
+    </svg>`;}
+  return `<svg class="ring-svg" viewBox="0 0 34 34" xmlns="http://www.w3.org/2000/svg">
+    <circle class="rd-glow"  cx="17" cy="17" r="14"/>
+    <circle class="rd-track" cx="17" cy="17" r="14"/>
+    <circle class="rd-pulse" cx="17" cy="17" r="14"/>
+    <circle class="rd-ring"  cx="17" cy="17" r="14" transform="rotate(-90 17 17)"/>
+    <polyline class="rd-check" points="11.5,17 15,20.5 22.5,13"/>
+  </svg>`;}
+
+function ringMissed(){
+  return `<svg class="ring-svg" viewBox="0 0 34 34" xmlns="http://www.w3.org/2000/svg">
+    <circle class="rm-track" cx="17" cy="17" r="14"/>
+    <circle class="rm-glow"  cx="17" cy="17" r="14" transform="rotate(-90 17 17)"/>
+    <circle class="rm-arc"   cx="17" cy="17" r="14" transform="rotate(-90 17 17)"/>
+  </svg>`;}
+
+/* FIX: corrected lock shackle path so it actually looks like a lock */
+function ringLocked(){
+  return `<svg class="ring-svg" viewBox="0 0 34 34" xmlns="http://www.w3.org/2000/svg">
+    <g class="rl-wrap">
+      <circle class="rl-track" cx="17" cy="17" r="14"/>
+      <rect class="rl-body" x="12.5" y="18.5" width="9" height="6.5" rx="1.8" ry="1.8"/>
+      <path class="rl-shackle" d="M14,18.5 v-2 a3,3 0 0 1 6,0 v2"/>
+    </g>
+  </svg>`;}
+
+/* ═══ RENDER ═══ */
+function renderTabs(){const keys=getKeys();document.getElementById('tabs').innerHTML=keys.map(k=>`<button class="tab${k===active?' on':''}" onclick="sw('${k}')">${k}${k===todayDayType?' <span class="pulse"></span>':''}</button>`).join('');}
+
+function getStatus(idx,block){
+  if(active!==todayDayType) return 'other';
+  if(!TRACKED.has(block.c)) return 'untracked';
+  const day=store[todayK]||{};
+  const isDone=day[idx]===true;
+  if(isDone){const endMin=toMinutes(block.e);return nowMin>endMin?'done-locked':'done';}
+  const endMin=toMinutes(block.e),startMin=toMinutes(block.s);
+  if(nowMin>endMin) return 'missed';
+  if(nowMin>=startMin) return 'open';
+  return 'locked';}
+
+function toggle(idx){
+  const block=D[active].blocks[idx];
+  if(active!==todayDayType) return;
+  const status=getStatus(idx,block);
+  if(status==='open'){if(!store[todayK]) store[todayK]={};store[todayK][idx]=true;}
+  else if(status==='done'){const endMin=toMinutes(block.e),startMin=toMinutes(block.s);if(nowMin>=startMin&&nowMin<=endMin){if(store[todayK]) delete store[todayK][idx];}}
+  saveStore(store);render();renderStreakCounter();}
+
+function render(){
+  const s=D[active];
+  const{quote}=getCurrentQuote();
+  const shortQuote=quote.length>38?quote.slice(0,36)+'…':quote;
+
+  let statsHTML=`
+    <div class="stat" onclick="openSSCPanel()" style="--accent:var(--teal)">
+      <div class="stat-l">SSC CGL</div><div class="stat-v">${s.ssc} hrs</div>
+    </div>
+    <div class="stat" onclick="openJobPanel()" style="--accent:var(--blue)">
+      <div class="stat-l">Job Hunt</div><div class="stat-v">${s.job} hrs</div>
+    </div>`;
+  if(s.code) statsHTML+=`
+    <div class="stat" onclick="openCodingPanel()" style="--accent:var(--purple)">
+      <div class="stat-l">Coding</div><div class="stat-v">${s.code} hr</div>
+    </div>`;
+  statsHTML+=`
+    <div class="stat" onclick="openQuotePanel()" style="--accent:var(--amber)">
+      <div class="stat-l">Today's Fuel</div>
+      <div class="stat-v small"><span style="color:var(--amber)">"</span>${shortQuote}<span style="color:var(--amber)">"</span></div>
+    </div>`;
+  document.getElementById('stats').innerHTML=statsHTML;
+
+  document.getElementById('blocks').innerHTML=s.blocks.map((b,i)=>{
+    const status=getStatus(i,b);
+    let ringHTML='',checkCls='',blCls='';
+    if(TRACKED.has(b.c)){
+      if(status==='done')           {checkCls='done';        ringHTML=ringDone(false); blCls='tracked-done';}
+      else if(status==='done-locked'){checkCls='done-locked'; ringHTML=ringDone(true);  blCls='tracked-done';}
+      else if(status==='missed')    {checkCls='missed';       ringHTML=ringMissed();    blCls='tracked-missed';}
+      else if(status==='open')      {checkCls='open';         ringHTML=ringOpen();      blCls='tracked-open';}
+      else                          {checkCls='locked';       ringHTML=ringLocked();}
+    }
+    const label=b.c==='job'?'job hunt':b.c==='ssc'?'ssc cgl':b.c==='code'?'coding':b.c==='loop'?'loophole':'break';
+    return`<div class="bl glass ${b.c} ${blCls}">${TRACKED.has(b.c)?`<div class="check ${checkCls}" onclick="${(checkCls==='open'||checkCls==='done')?'toggle('+i+')':''}" role="button" aria-label="${b.ti} status">${ringHTML}</div>`:`<div class="placeholder"></div>`}<div class="btime">${fmtTime(b.s)}<br>${fmtTime(b.e)}</div><div class="bcontent"><div class="bt">${b.ti}<span class="bdg">${label}</span></div>${b.d?`<div class="bd">${b.d}</div>`:''}</div></div>`;
+  }).join('');
+
+  document.getElementById('extra').innerHTML=`${s.tip?`<div class="tip glass">${s.tip}</div>`:''}${(s.loopholes&&s.loopholes.length)?`<div class="loophole glass"><div class="loophole-t">&#x26a1; Loophole timing today</div><ul>${s.loopholes.map(l=>`<li>${l}</li>`).join('')}</ul></div>`:''}${s.subj?`<div class="subj glass"><div class="subj-t">&#x1f4da; SSC subject rotation</div><div>${s.subj}</div></div>`:''}`;}
+
+/* ═══ SCORE HELPERS ═══ */
+function getDayScore(dateKey){
+  const dt=parseLocalDate(dateKey);const groupName=DAY_TYPE[dt.getDay()];const sched=groupName&&D[groupName]?D[groupName]:null;
+  if(!sched) return{ratio:0,done:0,total:0};
+  const trackedBlocks=sched.blocks.filter(b=>TRACKED.has(b.c));const total=trackedBlocks.length;
+  if(!total) return{ratio:0,done:0,total:0};
+  const day=store[dateKey]||{};let done=0;
+  sched.blocks.forEach((b,idx)=>{if(TRACKED.has(b.c)&&day[idx]===true)done++;});
+  return{ratio:done/total,done,total};}
+
+function computeStreak(){
+  let streak=0;const cursor=new Date(now);
+  for(let i=0;i<400;i++){
+    const key=todayKey(cursor);const{ratio}=getDayScore(key);
+    if(key===todayK){if(ratio>=0.8)streak++;}else{if(ratio>=0.8)streak++;else break;}
+    cursor.setDate(cursor.getDate()-1);}return streak;}
+
+function scoreToLevel(done,total){if(done===0||total<=0)return 0;const r=done/total;if(r>=0.8)return 4;if(r>=0.5)return 3;if(r>=0.25)return 2;return 1;}
+
+/* ═══ HEATMAP ═══ */
+const MONTH_NAMES=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const START_YEAR=2022;const END_YEAR=2030;const CELL_STEP=13;
+
+function buildDayLabels(){const c=document.getElementById('hm-day-lbls');c.innerHTML='';['','Mon','','Wed','','Fri',''].forEach(lbl=>{const el=document.createElement('div');el.className='hm-day-lbl';el.textContent=lbl;c.appendChild(el);});}
+
+function buildHeatmap(){
+  const timeline=document.getElementById('hm-timeline');timeline.innerHTML='';
+  const tooltip=document.getElementById('gh-tooltip');
+  const globalStart=new Date(START_YEAR,0,1);globalStart.setDate(globalStart.getDate()-globalStart.getDay());
+  const globalEnd=new Date(END_YEAR,11,31);globalEnd.setDate(globalEnd.getDate()+(6-globalEnd.getDay()));
+  const totalDays=Math.round((globalEnd-globalStart)/(24*60*60*1000))+1;
+  const totalWeeks=Math.ceil(totalDays/7);
+  let sectionByYear={};
+  for(let yr=START_YEAR;yr<=END_YEAR;yr++){sectionByYear[yr]={yearEl:null,topRow:null,colsEl:null,weekCount:0,lastMonth:-1};}
+  let weekYears=[];
+  for(let w=0;w<totalWeeks;w++){const midWeek=new Date(globalStart);midWeek.setDate(globalStart.getDate()+w*7+3);weekYears.push(midWeek.getFullYear());}
+  let currentYear=-1;
+  for(let w=0;w<totalWeeks;w++){
+    const wy=weekYears[w];if(wy<START_YEAR||wy>END_YEAR) continue;
+    if(wy!==currentYear){
+      if(currentYear!==-1){const div=document.createElement('div');div.className='hm-year-divider';timeline.appendChild(div);}
+      currentYear=wy;
+      const sec=document.createElement('div');sec.className='hm-year-section';
+      const topRow=document.createElement('div');topRow.className='hm-top-row';
+      const yearLbl=document.createElement('span');yearLbl.className='hm-year-lbl';yearLbl.textContent=wy;topRow.appendChild(yearLbl);
+      const colsEl=document.createElement('div');colsEl.className='hm-cols';
+      sec.appendChild(topRow);sec.appendChild(colsEl);timeline.appendChild(sec);
+      sectionByYear[wy].yearEl=sec;sectionByYear[wy].topRow=topRow;sectionByYear[wy].colsEl=colsEl;sectionByYear[wy].weekCount=0;sectionByYear[wy].lastMonth=-1;}
+    const sec=sectionByYear[wy];const wStart=new Date(globalStart);wStart.setDate(globalStart.getDate()+w*7);
+    const m=wStart.getMonth();
+    if(wStart.getFullYear()===wy&&m!==sec.lastMonth){sec.lastMonth=m;const xPx=sec.weekCount*CELL_STEP;const monthLbl=document.createElement('span');monthLbl.className='hm-month-lbl';monthLbl.style.left=(xPx<28?30:xPx)+'px';monthLbl.textContent=MONTH_NAMES[m];sec.topRow.appendChild(monthLbl);}
+    const col=document.createElement('div');col.className='hm-col';
+    for(let d=0;d<7;d++){
+      const cellDate=new Date(wStart);cellDate.setDate(wStart.getDate()+d);
+      const cellYear=cellDate.getFullYear();
+      /* FIX: use date string comparison instead of Date object > now to avoid time-of-day issues */
+      const key=todayKey(cellDate);
+      const isToday=key===todayK;
+      const isFuture=key>todayK;
+      const cell=document.createElement('div');
+      if(cellYear!==wy){cell.className='gh-cell pad-cell';}
+      else{
+        const{ratio,done,total}=getDayScore(key);const level=isFuture?0:scoreToLevel(done,total);
+        let cls='gh-cell';if(level>0) cls+=' l'+level;if(isFuture) cls+=' future-cell';cell.className=cls;
+        if(isToday){cell.style.outline='1px solid rgba(56,182,212,0.55)';cell.style.outlineOffset='1px';}
+        const pct=Math.round(ratio*100);const dateLabel=isToday?'Today':cellDate.toLocaleDateString('en-IN',{day:'numeric',month:'short',weekday:'short'});
+        cell.addEventListener('mouseenter',e=>{tooltip.textContent=dateLabel+' — '+done+'/'+total+' ('+pct+'%)';tooltip.style.display='block';tooltip.style.left=(e.clientX+12)+'px';tooltip.style.top=(e.clientY-28)+'px';});
+        cell.addEventListener('mousemove',e=>{tooltip.style.left=(e.clientX+12)+'px';tooltip.style.top=(e.clientY-28)+'px';});
+        cell.addEventListener('mouseleave',()=>{tooltip.style.display='none';});}
+      col.appendChild(cell);}
+    sec.colsEl.appendChild(col);sec.weekCount++;}}
+
+function scrollToToday(){
+  /* FIX: double rAF ensures DOM is fully laid out before measuring scroll position */
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    const now2=new Date();const yr=now2.getFullYear();
+    const msPerWeek=7*24*60*60*1000;
+    const scrollEl2=document.getElementById('hm-scroll');
+    let targetPx=0;
+    for(let y=START_YEAR;y<yr;y++){
+      const yStart=new Date(y,0,1);yStart.setDate(yStart.getDate()-yStart.getDay());
+      const yEnd=new Date(y,11,31);yEnd.setDate(yEnd.getDate()+(6-yEnd.getDay()));
+      const wks=Math.ceil((yEnd-yStart+1)/msPerWeek);
+      targetPx+=(wks*CELL_STEP)+16;}
+    const yStart2=new Date(yr,0,1);yStart2.setDate(yStart2.getDate()-yStart2.getDay());
+    const weeksIntoYear=Math.floor((now2-yStart2)/msPerWeek);
+    targetPx+=weeksIntoYear*CELL_STEP;
+    targetPx-=scrollEl2.getBoundingClientRect().width/2;
+    scrollEl2.scrollLeft=Math.max(0,targetPx);}));}
+
+function enableDragScroll(){
+  const el=document.getElementById('hm-scroll');
+  let isDown=false,startX=0,scrollStart=0;
+  el.addEventListener('mousedown',e=>{isDown=true;startX=e.pageX-el.offsetLeft;scrollStart=el.scrollLeft;el.style.cursor='grabbing';});
+  window.addEventListener('mouseup',()=>{isDown=false;el.style.cursor='grab';});
+  el.addEventListener('mousemove',e=>{if(!isDown) return;e.preventDefault();const x=e.pageX-el.offsetLeft;el.scrollLeft=scrollStart-(x-startX);});
+  el.addEventListener('wheel',e=>{if(Math.abs(e.deltaX)>Math.abs(e.deltaY)) return;e.preventDefault();el.scrollLeft+=e.deltaY*1.8;},{passive:false});}
+
+/* FIX: split streak into counter-only update (fast) vs full heatmap rebuild (expensive)
+   renderStreakCounter: just updates the streak number — called on every toggle
+   renderStreak: full rebuild including heatmap — called once at init and on day change */
+function renderStreakCounter(){
+  const streak=computeStreak();
+  document.getElementById('streak-display').textContent=streak+' day'+(streak===1?'':'s')+(streak>0?' \uD83D\uDD25':'');}
+
+let _heatmapBuilt=false;
+function renderStreak(){
+  renderStreakCounter();
+  buildDayLabels();
+  buildHeatmap();
+  _heatmapBuilt=true;
+  scrollToToday();}
+
+/* FIX: only rebuild heatmap when store changes, not every 30s — update cells in place if possible */
+function refreshHeatmapCells(){
+  /* Lightweight: just update today's cell level without rebuilding everything */
+  const{ratio,done,total}=getDayScore(todayK);
+  const level=scoreToLevel(done,total);
+  /* Find today cell by its stored data and update class — easier to just rebuild */
+  if(_heatmapBuilt) buildHeatmap();}
+
+function scheduleQuoteCheck(){
+  const mins=getMinutesUntilNextQuote();
+  setTimeout(()=>{render();scheduleQuoteCheck();},mins*60*1000+1000);}
+
+function resetData(){
+  document.getElementById('confirm-text').innerHTML='Reset ALL data?<br>This restores the original schedule &amp; day groups, and clears all completion history.<br>This cannot be undone.';
+  document.getElementById('confirm-overlay').style.display='flex';
+}
+function confirmReset(yes){
+  document.getElementById('confirm-overlay').style.display='none';
+  if(!yes) return;
+  store={};saveStore(store);
+  D=deepClone(DEFAULT_D);saveSchedule();
+  dayGroups=deepCloneGroups(DEFAULT_DAY_GROUPS);saveDayGroups();
+  DAY_TYPE=buildDayTypeMap(dayGroups);
+  todayDayType=DAY_TYPE[now.getDay()]||getKeys()[0];
+  if(!D[active]) active=todayDayType;
+  renderTabs();render();renderStreak();
+}
+function sw(k){active=k;renderTabs();render();}
+
+/* ══════════════════════════════════════════
+   SCHEDULE EDITOR
+   ══════════════════════════════════════════ */
+const CAT_OPTIONS=[
+  {v:'ssc', label:'SSC CGL', color:'var(--teal)'},
+  {v:'job', label:'JOB HUNT', color:'var(--blue)'},
+  {v:'code', label:'CODING', color:'var(--purple)'},
+  {v:'loop', label:'LOOPHOLE', color:'var(--amber)'},
+  {v:'brk', label:'BREAK', color:'#3a4a5c'},
+];
+let editorActiveTab=null;
+
+function catColor(c){const f=CAT_OPTIONS.find(o=>o.v===c);return f?f.color:'var(--text-dim)';}
+function catOptionsHTML(selected){return CAT_OPTIONS.map(o=>`<option value="${o.v}"${o.v===selected?' selected':''}>${o.label}</option>`).join('');}
+
+/* time helpers: 24h "HH:MM" <-> 12h display for <input type=time> we use HH:MM (24h) natively */
+/* ══════════════════════════════════════════
+   DAY GROUP MANAGER
+   ══════════════════════════════════════════ */
+const ALL_DAYS=[
+  {idx:0,label:'Sun'},{idx:1,label:'Mon'},{idx:2,label:'Tue'},
+  {idx:3,label:'Wed'},{idx:4,label:'Thu'},{idx:5,label:'Fri'},{idx:6,label:'Sat'}
+];
+
+/* Working copy of groups during editing — committed on Save */
+/* ─── dgmGroups: working copy during editor session ───
+   Structure: { "groupKey": [dayIdx, ...] }
+   Keys are auto-generated from day membership on save.
+   dgmOriginalKeys maps current key -> original key (for D schedule lookup).
+*/
+let dgmGroups={};
+let dgmOriginalKeys={}; // currentKey -> originalKeyInD
+
+/* Build a label from sorted day indices: [1,3,5] -> "Mon / Wed / Fri" */
+function dgmBuildLabel(dayIndices){
+  const order=[0,1,2,3,4,5,6]; // Sun..Sat
+  const sorted=dayIndices.slice().sort((a,b)=>order.indexOf(a)-order.indexOf(b));
+  return sorted.map(i=>ALL_DAYS.find(d=>d.idx===i).label).join(' / ');
+}
+
+function dgmStartEdit(){
+  dgmGroups=deepCloneGroups(dayGroups);
+  // initialise originalKeys map: each current key maps to itself
+  dgmOriginalKeys={};
+  Object.keys(dgmGroups).forEach(k=>{dgmOriginalKeys[k]=k;});
+}
+
+function dgmGetAssignedDay(dayIdx){
+  for(const name of Object.keys(dgmGroups)){
+    if(dgmGroups[name].includes(dayIdx)) return name;
+  }
+  return null;
+}
+
+function dgmRenderGroups(){
+  dgmStartEdit();
+  const container=document.getElementById('dgm-groups');
+  if(!container) return;
+  _dgmPaintGroups(container);
+}
+
+function _dgmPaintGroups(container){
+  const groups=dgmGroups;
+  container.innerHTML=Object.keys(groups).map((name,gi)=>{
+    const daysHTML=ALL_DAYS.map(day=>{
+      const assigned=groups[name].includes(day.idx);
+      const ownerName=dgmGetAssignedDay(day.idx);
+      const conflictGroup=ownerName&&ownerName!==name?ownerName:'';
+      return `<div class="dgm-day-chip${assigned?' assigned':''}" title="${conflictGroup?'Currently in: '+conflictGroup:''}" onclick="dgmToggleDay('${name}',${day.idx})">
+        <span class="dgm-chip-check"></span>
+        <span>${day.label}</span>
+      </div>`;
+    }).join('');
+    return `<div class="dgm-group" data-group="${gi}">
+      <div class="dgm-group-header">
+        <span class="dgm-group-name-display" style="flex:1;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:600;color:var(--text);padding:5px 2px;">${escapeHtml(name)}</span>
+        <button class="dgm-delete-group-btn" onclick="dgmDeleteGroup('${escapeAttr(name)}')" title="Delete group">&#x2715;</button>
+      </div>
+      <div class="dgm-days-grid">${daysHTML}</div>
+    </div>`;
+  }).join('');
+  dgmValidate();
+}
+
+function dgmToggleDay(groupName, dayIdx){
+  const currentOwner=dgmGetAssignedDay(dayIdx);
+  if(currentOwner&&currentOwner!==groupName){
+    // Remove from previous group
+    dgmGroups[currentOwner]=dgmGroups[currentOwner].filter(d=>d!==dayIdx);
+  }
+  if(dgmGroups[groupName].includes(dayIdx)){
+    // Unassign — remove from this group
+    dgmGroups[groupName]=dgmGroups[groupName].filter(d=>d!==dayIdx);
+  } else {
+    // Assign to this group
+    dgmGroups[groupName].push(dayIdx);
+  }
+  // Always keep days sorted in calendar order (Sun=0 first)
+  dgmGroups[groupName].sort((a,b)=>a-b);
+  const container=document.getElementById('dgm-groups');
+  if(container) _dgmPaintGroups(container);
+}
+
+function dgmDeleteGroup(name){
+  if(Object.keys(dgmGroups).length<=1){dgmValidate('Must have at least one group.');return;}
+  delete dgmGroups[name];
+  delete dgmOriginalKeys[name];
+  const container=document.getElementById('dgm-groups');
+  if(container) _dgmPaintGroups(container);
+  if(editorActiveTab===name){editorActiveTab=Object.keys(dgmGroups)[0];renderEditorTabs();renderEditorBody();}
+}
+
+function dgmAddGroup(){
+  const newKey='__new__'+Date.now();
+  dgmGroups[newKey]=[];
+  dgmOriginalKeys[newKey]=null; // no existing D entry
+  const container=document.getElementById('dgm-groups');
+  if(container) _dgmPaintGroups(container);
+}
+
+/* Called by saveEditor — rebuilds group keys from actual day membership,
+   renames keys in D to match, returns rebuilt groups object */
+function dgmCommit(){
+  const usedLabels={};
+  const newGroups={};
+  const newD={};
+
+  Object.keys(dgmGroups).forEach(currentKey=>{
+    const days=dgmGroups[currentKey].slice().sort((a,b)=>a-b);
+    // Build label from days; if empty, keep a placeholder
+    let label=days.length>0?dgmBuildLabel(days):'(empty)';
+    // Deduplicate label if collision
+    if(usedLabels[label]!==undefined){
+      usedLabels[label]++;
+      label=label+' ('+usedLabels[label]+')';
+    } else {
+      usedLabels[label]=0;
+    }
+    newGroups[label]=days;
+    // Carry over schedule data: look up by original key first, then current key
+    const origKey=dgmOriginalKeys[currentKey]||currentKey;
+    const schedData=D[origKey]||D[currentKey]||D[label];
+    if(schedData){
+      newD[label]=schedData;
+    } else {
+      // Brand new group — blank schedule
+      newD[label]={focus:'New schedule group',job:0,ssc:0,code:0,tip:'',loopholes:[],subj:'',blocks:[]};
+    }
+  });
+
+  // Remove stale D keys that no longer exist as groups
+  // (keys not in newGroups are orphaned — keep them around in D but don't expose)
+  Object.keys(newGroups).forEach(k=>{
+    if(!newD[k]) newD[k]={focus:'',job:0,ssc:0,code:0,tip:'',loopholes:[],subj:'',blocks:[]};
+    if(!Array.isArray(newD[k].blocks)) newD[k].blocks=[];
+  });
+
+  // Overwrite D with only the current groups (preserve DEFAULT_D untouched)
+  // Keep any extra keys that aren't group names (none expected, but safe)
+  Object.keys(D).forEach(k=>{if(!newGroups[k]) delete D[k];});
+  Object.assign(D, newD);
+
+  return newGroups;
+}
+
+function dgmValidate(msg){
+  const el=document.getElementById('dgm-validation');
+  if(!el) return true;
+  if(msg){el.className='dgm-validation-msg error';el.textContent=msg;return false;}
+  // Check all days assigned exactly once
+  const assigned=[];
+  Object.values(dgmGroups).forEach(days=>days.forEach(d=>assigned.push(d)));
+  const unassigned=ALL_DAYS.filter(d=>!assigned.includes(d.idx)).map(d=>d.label);
+  const duplicates=ALL_DAYS.filter(d=>assigned.filter(a=>a===d.idx).length>1).map(d=>d.label);
+  if(duplicates.length){el.className='dgm-validation-msg error';el.textContent='❌ Duplicate assignment: '+duplicates.join(', ')+'— a day can only belong to one group.';return false;}
+  if(unassigned.length){el.className='dgm-validation-msg error';el.textContent='❌ Unassigned days: '+unassigned.join(', ')+'— every day must belong to a group.';return false;}
+  el.className='dgm-validation-msg ok';el.textContent='✔ All 7 days assigned correctly.';return true;
+}
+
+function openEditor(){
+  editorActiveTab=active;
+  const editorHTML=`
+    <div class="editor-section-divider">&#x229e; Day Group Manager</div>
+    <div class="dgm-section">
+      <div class="dgm-header">
+        <span class="dgm-title">Assign days to schedule groups</span>
+        <button class="dgm-add-group-btn" onclick="dgmAddGroup()">+ New Group</button>
+      </div>
+      <div id="dgm-groups"></div>
+      <div class="dgm-validation-msg" id="dgm-validation"></div>
+    </div>
+    <div class="editor-section-divider">&#x229e; Schedule Tasks</div>
+    <div id="editor-tabs" class="tabs" style="margin-bottom:14px;"></div>
+    <div class="ed-tab-note">Edit times, titles, descriptions and categories below. Changes apply immediately to status logic, locking, and streak calculations once saved.</div>
+    <div id="editor-list" class="editor-list"></div>
+    <button class="ed-add-btn" onclick="addTask()">+ Add Task</button>
+    <div class="ed-actions-bar">
+      <button class="ed-save-btn" onclick="saveEditor()">Save Changes</button>
+      <button class="ed-reset-sched-btn" onclick="resetSchedule()">Reset to Default</button>
+    </div>`;
+  openModal('SCHEDULE EDITOR', editorHTML, 'var(--cyan)');
+  dgmRenderGroups();
+  renderEditorTabs();
+  renderEditorBody();
+}
+
+function renderEditorTabs(){
+  const c=document.getElementById('editor-tabs');
+  if(!c) return;
+  const keys=getKeys();
+  c.innerHTML=keys.map(k=>`<button class="tab${k===editorActiveTab?' on':''}" onclick="switchEditorTab('${k}')">${k}</button>`).join('');
+}
+function switchEditorTab(k){editorActiveTab=k;renderEditorTabs();renderEditorBody();}
+
+function renderEditorBody(){
+  const c=document.getElementById('editor-list');
+  if(!c) return;
+  const blocks=D[editorActiveTab].blocks;
+  c.innerHTML=blocks.map((b,i)=>`
+    <div class="editor-row" data-idx="${i}">
+      <div class="editor-row-top">
+        <span class="ed-cat-dot" style="background:${catColor(b.c)}"></span>
+        <div class="editor-row-fields" style="flex:1;grid-template-columns:1fr 1fr;">
+          <div class="ed-field"><label>Start Time</label><input type="time" value="${b.s}" onchange="updateField('${editorActiveTab}',${i},'s',this.value)"></div>
+          <div class="ed-field"><label>End Time</label><input type="time" value="${b.e}" onchange="updateField('${editorActiveTab}',${i},'e',this.value)"></div>
+        </div>
+        <button class="ed-icon-btn" onclick="moveTask(${i},-1)" title="Move up" aria-label="Move up">&#8593;</button>
+        <button class="ed-icon-btn" onclick="moveTask(${i},1)" title="Move down" aria-label="Move down">&#8595;</button>
+        <button class="ed-icon-btn danger" onclick="deleteTask(${i})" title="Delete" aria-label="Delete">&#x2715;</button>
+      </div>
+      <div class="editor-row-fields full">
+        <div class="ed-field"><label>Task Title</label><input type="text" value="${escapeAttr(b.ti)}" onchange="updateField('${editorActiveTab}',${i},'ti',this.value)"></div>
+      </div>
+      <div class="editor-row-fields full">
+        <div class="ed-field"><label>Description</label><textarea onchange="updateField('${editorActiveTab}',${i},'d',this.value)">${escapeHtml(b.d)}</textarea></div>
+      </div>
+      <div class="editor-row-fields full">
+        <div class="ed-field"><label>Category</label><select onchange="updateField('${editorActiveTab}',${i},'c',this.value)">${catOptionsHTML(b.c)}</select></div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function escapeAttr(s){return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function escapeHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+function updateField(dayKey,idx,field,value){
+  D[dayKey].blocks[idx][field]=value;
+  if(field==='c'){
+    // refresh the dot color without full re-render
+    const row=document.querySelector(`#editor-list .editor-row[data-idx="${idx}"] .ed-cat-dot`);
+    if(row) row.style.background=catColor(value);
+  }
+}
+
+function addTask(){
+  D[editorActiveTab].blocks.push({s:"12:00",e:"13:00",ti:"New Task",d:"",c:"brk"});
+  renderEditorBody();
+}
+
+function deleteTask(idx){
+  D[editorActiveTab].blocks.splice(idx,1);
+  renderEditorBody();
+}
+
+function moveTask(idx,dir){
+  const arr=D[editorActiveTab].blocks;
+  const newIdx=idx+dir;
+  if(newIdx<0||newIdx>=arr.length) return;
+  [arr[idx],arr[newIdx]]=[arr[newIdx],arr[idx]];
+  renderEditorBody();
+}
+
+function saveEditor(){
+  // Validate before committing
+  if(!dgmValidate()){return;}
+  // Rebuild group keys from actual day membership, rename D keys to match
+  dayGroups=dgmCommit();
+  saveDayGroups();
+  DAY_TYPE=buildDayTypeMap(dayGroups);
+  todayDayType=DAY_TYPE[now.getDay()]||getKeys()[0];
+  // sort each group's blocks by start time
+  Object.keys(D).forEach(k=>{
+    if(Array.isArray(D[k].blocks)) D[k].blocks.sort((a,b)=>toMinutes(a.s)-toMinutes(b.s));
+  });
+  saveSchedule();
+  // Make sure active tab is still valid
+  if(!D[active]||!dayGroups[active]) active=todayDayType;
+  renderTabs();render();renderStreak();
+  closeModal();
+}
+
+function resetSchedule(){
+  // Render an inline confirm panel inside the editor modal body — avoids z-index conflict
+  const body=document.getElementById('modal-body');
+  if(!body) return;
+  // Overlay the entire modal-body with a positioned confirm panel
+  const panel=document.createElement('div');
+  panel.id='editor-reset-confirm';
+  panel.style.cssText='position:absolute;inset:0;z-index:10;background:rgba(2,8,26,0.88);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);display:flex;align-items:center;justify-content:center;';
+  panel.innerHTML=`
+    <div style="background:rgba(4,12,34,0.98);border:1px solid rgba(180,60,80,0.32);border-radius:18px;padding:28px 28px;max-width:300px;width:90%;box-shadow:0 0 48px rgba(0,0,20,0.8),0 1px 0 rgba(255,255,255,0.06) inset;text-align:center;">
+      <div style="font-family:'Orbitron',sans-serif;font-size:12px;color:#c94f6e;letter-spacing:2px;margin-bottom:12px;">&#x26a0; CONFIRM RESET</div>
+      <div style="font-size:13px;color:#5a7a9a;line-height:1.6;margin-bottom:22px;">Reset schedule to defaults?<br>Times, tasks and descriptions will be restored.<br><span style="color:rgba(42,170,142,0.8);">Streak &amp; history are NOT affected.</span></div>
+      <div style="display:flex;gap:10px;justify-content:center;">
+        <button onclick="editorResetCancel()" style="font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:1.5px;padding:10px 18px;border-radius:10px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.04);color:#6a8aaa;cursor:pointer;">CANCEL</button>
+        <button onclick="editorResetConfirm()" style="font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:1.5px;padding:10px 18px;border-radius:10px;border:1px solid rgba(180,60,80,0.45);background:rgba(180,60,80,0.12);color:#c94f6e;cursor:pointer;">RESET</button>
+      </div>
+    </div>`;
+  // Append to modal-backdrop (position:fixed z-index:2000) so it sits above the editor
+  // and is not clipped by modal-panel's overflow:hidden
+  const backdrop=document.getElementById('modal-backdrop');
+  if(backdrop) backdrop.appendChild(panel);
+}
+
+function editorResetCancel(){
+  const panel=document.getElementById('editor-reset-confirm');
+  if(panel) panel.remove();
+}
+
+function editorResetConfirm(){
+  const panel=document.getElementById('editor-reset-confirm');
+  if(panel) panel.remove();
+  // Perform the schedule + group reset
+  D=deepClone(DEFAULT_D);
+  dayGroups=deepCloneGroups(DEFAULT_DAY_GROUPS);
+  saveDayGroups();
+  DAY_TYPE=buildDayTypeMap(dayGroups);
+  todayDayType=DAY_TYPE[now.getDay()]||getKeys()[0];
+  if(!D[active]) active=todayDayType;
+  saveSchedule();
+  // Refresh editor in place — stay inside editor
+  editorActiveTab=active;
+  dgmRenderGroups();
+  renderEditorTabs();
+  renderEditorBody();
+  // Also refresh dashboard behind the editor
+  renderTabs();render();renderStreak();
+}
+
+function tick(){
+  now=new Date();
+  const newTodayK=todayKey(now);
+  /* FIX: detect day rollover and refresh day type */
+  if(newTodayK!==todayK){
+    todayK=newTodayK;
+    DAY_TYPE=buildDayTypeMap(dayGroups);
+    todayDayType=DAY_TYPE[now.getDay()]||getKeys()[0];
+    renderTabs();
+    render();
+    renderStreak();}
+  nowMin=now.getHours()*60+now.getMinutes();
+  updateClock();}
+
+function init(){
+  buildClock();renderTabs();render();renderStreak();enableDragScroll();
+  scheduleQuoteCheck();
+  setInterval(tick,1000);
+  /* FIX: 30s interval only re-renders blocks (status checks), not heatmap */
+  setInterval(()=>{render();renderStreakCounter();},30000);}
+init();
+</script>
+</body>
+</html>
