@@ -751,22 +751,31 @@ function getMinutesUntilNextQuote(){const state=getQuoteState();const now=Date.n
 /* ═══ CATEGORY SYSTEM ═══ */
 const CAT_STORE_KEY='sched_categories_v1';
 const DEFAULT_CATEGORIES=[
-  {v:'ssc',  label:'SSC CGL',   color:'#2aaa8e', builtin:true,  notes:''},
-  {v:'job',  label:'JOB HUNT',  color:'#3a7ecf', builtin:true,  notes:''},
-  {v:'code', label:'CODING',    color:'#7c6ec7', builtin:true,  notes:''},
-  {v:'loop', label:'LOOPHOLE',  color:'#c9893a', builtin:true,  notes:''},
-  {v:'brk',  label:'BREAK',     color:'#3a4a5c', builtin:true,  notes:''},
+  {v:'ssc',  label:'SSC CGL',   color:'#2aaa8e', notes:''},
+  {v:'job',  label:'JOB HUNT',  color:'#3a7ecf', notes:''},
+  {v:'code', label:'CODING',    color:'#7c6ec7', notes:''},
+  {v:'loop', label:'LOOPHOLE',  color:'#c9893a', notes:''},
+  {v:'brk',  label:'BREAK',     color:'#3a4a5c', notes:''},
 ];
+
+function normalizeCategory(cat){
+  return {
+    v:String(cat&&cat.v||('cat_'+Date.now())),
+    label:String(cat&&cat.label||'NEW CATEGORY'),
+    color:String(cat&&cat.color||'#4a7acf'),
+    notes:String(cat&&cat.notes||'')
+  };
+}
 
 function loadCategories(){
   try{
     const r=localStorage.getItem(CAT_STORE_KEY);
-    if(r){const p=JSON.parse(r);if(Array.isArray(p)&&p.length>0)return p;}
+    if(r){const p=JSON.parse(r);if(Array.isArray(p)&&p.length>0)return p.map(normalizeCategory);}
   }catch(e){}
   return JSON.parse(JSON.stringify(DEFAULT_CATEGORIES));
 }
 function saveCategories(){
-  try{localStorage.setItem(CAT_STORE_KEY,JSON.stringify(categories));}catch(e){}
+  try{localStorage.setItem(CAT_STORE_KEY,JSON.stringify(categories.map(normalizeCategory)));}catch(e){}
 }
 let categories=loadCategories();
 
@@ -995,7 +1004,7 @@ function openCatInfoPage(catVal){
   openModal(cat.label, html, cat.color);
 }
 
-/* Legacy panel openers for built-in categories */
+/* Legacy panel openers for original category ids */
 function openSSCPanel(){
   const cat=getCatByVal('ssc');
   const blocks=D[active]?D[active].blocks||[]:[];
@@ -1015,7 +1024,7 @@ function openSSCPanel(){
     </div>
     ${customNotes.trim()?`<div class="cat-info-notes" style="margin-bottom:18px">${escapeHtml(customNotes)}</div>`:''}
     ${syllabusHTML}`;
-  openModal('SSC CGL TIER-1 SYLLABUS',html,'var(--teal)');}
+  openModal(cat.label+' TIER-1 SYLLABUS',html,cat.color);}
 
 function openJobPanel(){
   const cat=getCatByVal('job');
@@ -1049,7 +1058,7 @@ function openJobPanel(){
     <div class="job-section-head">Job Portals</div><div class="job-platform-grid">${cards}</div>
     <div class="job-section-head" style="margin-top:8px;">Direct Company Career Pages</div>
     <div class="job-careers-box"><b>Check company career pages daily and apply directly whenever possible.</b><br><br>Direct applications bypass ATS filters and are seen by hiring managers faster.</div>`;
-  openModal('JOB HUNT PLATFORMS',html,'var(--blue)');}
+  openModal(cat.label+' PLATFORMS',html,cat.color);}
 
 function openCodingPanel(){
   const cat=getCatByVal('code');
@@ -1069,7 +1078,7 @@ function openCodingPanel(){
     </div>
     ${customNotes.trim()?`<div class="cat-info-notes" style="margin-bottom:18px">${escapeHtml(customNotes)}</div>`:''}
     ${cats2.map(cat2=>`<div class="code-category"><div class="code-cat-title">${cat2.t}</div><div class="code-platform-list">${cat2.platforms.map(p=>`<div class="code-badge ${cat2.cls}"><span class="code-dot"></span>${p}</div>`).join('')}</div></div>`).join('')}`;
-  openModal('CODING PLATFORMS',html,'var(--purple)');}
+  openModal(cat.label+' PLATFORMS',html,cat.color);}
 
 function openQuotePanel(){
   const{idx,quote}=getCurrentQuote();const mins=getMinutesUntilNextQuote();
@@ -1442,14 +1451,13 @@ function renderCatManager(){
   const c=document.getElementById('cat-mgr-list');
   if(!c) return;
   c.innerHTML=editorCategories.map((cat,i)=>{
-    const builtinLock=cat.builtin;
     return `<div class="cat-mgr-row" data-ci="${i}">
       <div class="cat-mgr-swatch" style="background:${cat.color}" title="Pick color">
         <input type="color" value="${cat.color}" onchange="catMgrSetColor(${i},this.value)" title="Pick color">
       </div>
-      <input class="cat-mgr-name" type="text" value="${escapeAttr(cat.label)}" ${builtinLock?'disabled':''} onchange="catMgrSetName(${i},this.value)" placeholder="Category name">
+      <input class="cat-mgr-name" type="text" value="${escapeAttr(cat.label)}" oninput="catMgrSetName(${i},this.value)" placeholder="Category name">
       <button class="cat-mgr-notes-btn" onclick="catMgrOpenNotes(${i})">Notes</button>
-      <button class="cat-mgr-del-btn" ${builtinLock?'disabled title="Built-in category"':''} onclick="catMgrDelete(${i})" title="Delete category">&#x2715;</button>
+      <button class="cat-mgr-del-btn" onclick="catMgrDelete(${i})" title="Delete category">&#x2715;</button>
     </div>`;
   }).join('');
 }
@@ -1462,6 +1470,14 @@ function catMgrSetColor(i,v){
 
 function catMgrSetName(i,v){
   editorCategories[i].label=v.trim()||editorCategories[i].label;
+}
+
+function catMgrSyncInputs(){
+  document.querySelectorAll('#cat-mgr-list .cat-mgr-row').forEach(row=>{
+    const i=Number(row.dataset.ci);
+    const name=row.querySelector('.cat-mgr-name');
+    if(editorCategories[i]&&name) catMgrSetName(i,name.value);
+  });
 }
 
 function catMgrOpenNotes(i){
@@ -1495,7 +1511,7 @@ function catMgrSaveNotes(i){
 
 function catMgrDelete(i){
   const cat=editorCategories[i];
-  if(cat.builtin) return;
+  if(!cat) return;
   let inUse=false;
   Object.values(D).forEach(sched=>{
     if(Array.isArray(sched.blocks)){
@@ -1509,19 +1525,20 @@ function catMgrDelete(i){
     panel.style.cssText='position:absolute;inset:0;z-index:10;background:rgba(2,8,26,0.90);backdrop-filter:blur(18px);display:flex;align-items:center;justify-content:center;';
     panel.innerHTML=`<div style="background:rgba(4,12,34,0.98);border:1px solid rgba(180,60,80,0.32);border-radius:16px;padding:24px;max-width:280px;width:90%;text-align:center;">
       <div style="font-family:'Orbitron',sans-serif;font-size:12px;color:var(--red);letter-spacing:2px;margin-bottom:10px;">&#x26a0; CANNOT DELETE</div>
-      <div style="font-size:13px;color:var(--text-dim);line-height:1.6;margin-bottom:18px;">Move or delete tasks using this category first.<br><b style="color:var(--text)">"${escapeHtml(cat.label)}"</b> is still used in one or more schedule blocks.</div>
+      <div style="font-size:13px;color:var(--text-dim);line-height:1.6;margin-bottom:18px;">Category is currently used by tasks. Reassign or remove those tasks before deleting.</div>
       <button onclick="document.getElementById('cat-del-warn').remove()" style="font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:1.5px;padding:10px 20px;border-radius:10px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.04);color:#6a8aaa;cursor:pointer;">OK</button>
     </div>`;
     if(backdrop) backdrop.appendChild(panel);
     return;
   }
+  if(!confirm('Delete category "'+cat.label+'"?')) return;
   editorCategories.splice(i,1);
   renderCatManager();
 }
 
 function catMgrAddCategory(){
   const newV='cat_'+Date.now();
-  editorCategories.push({v:newV,label:'NEW CATEGORY',color:'#4a7acf',builtin:false,notes:''});
+  editorCategories.push({v:newV,label:'NEW CATEGORY',color:'#4a7acf',notes:''});
   renderCatManager();
   setTimeout(()=>{
     const c=document.getElementById('cat-mgr-list');
@@ -1643,7 +1660,8 @@ function moveTask(idx,dir){
 
 function saveEditor(){
   if(!dgmValidate()){return;}
-  categories=JSON.parse(JSON.stringify(editorCategories));
+  catMgrSyncInputs();
+  categories=JSON.parse(JSON.stringify(editorCategories.map(normalizeCategory)));
   saveCategories();
   dayGroups=dgmCommit();
   saveDayGroups();
