@@ -864,21 +864,55 @@ async function startAppForUser(user){
   else{renderLegend();renderTabs();render();renderStreak();}
 }
 
-function signIn(){
-  const btn=document.getElementById('auth-google-btn');
-  const errEl=document.getElementById('auth-error');
-  const statusEl=document.getElementById('auth-status');
-  if(errEl) errEl.style.display='none';
-  if(btn) btn.disabled=true;
-  if(statusEl) statusEl.style.display='flex';
-  const provider=new firebase.auth.GoogleAuthProvider();
-  auth.signInWithPopup(provider).catch(e=>{
-    console.error('Sign-in failed:',e);
-    if(errEl){errEl.textContent='Sign-in failed. Please try again.';errEl.style.display='block';}
-  }).finally(()=>{
-    if(btn) btn.disabled=false;
-    if(statusEl) statusEl.style.display='none';
-  });
+function signIn() {
+    const btn = document.getElementById('auth-google-btn');
+    const errEl = document.getElementById('auth-error');
+    const statusEl = document.getElementById('auth-status');
+
+    // Clear previous error
+    if (errEl) {
+        errEl.style.display = 'none';
+        errEl.textContent = '';
+    }
+
+    // Disable button while signing in
+    if (btn) btn.disabled = true;
+    if (statusEl) statusEl.style.display = 'flex';
+
+    const provider = new firebase.auth.GoogleAuthProvider();
+
+    auth.signInWithPopup(provider)
+        .then((result) => {
+            console.log("✅ Sign-in successful:", result.user);
+            // No UI changes here.
+            // onAuthStateChanged() will automatically continue the app.
+        })
+        .catch((e) => {
+            console.error("❌ Firebase Sign-in Error");
+            console.error("Code:", e.code);
+            console.error("Message:", e.message);
+            console.error("Full Error:", e);
+
+            if (errEl) {
+                errEl.innerHTML = `
+                    <strong>Authentication Failed</strong><br><br>
+                    <b>Error Code:</b> ${e.code}<br><br>
+                    <b>Message:</b><br>${e.message}
+                `;
+                errEl.style.display = 'block';
+            }
+
+            // Extra popup so the error can't be missed
+            alert(
+                "Firebase Authentication Failed\n\n" +
+                "Error Code:\n" + e.code +
+                "\n\nMessage:\n" + e.message
+            );
+        })
+        .finally(() => {
+            if (btn) btn.disabled = false;
+            if (statusEl) statusEl.style.display = 'none';
+        });
 }
 
 function signOutUser(){
