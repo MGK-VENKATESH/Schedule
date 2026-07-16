@@ -539,9 +539,53 @@ body{
   .btime{min-width:72px;font-size:9.5px;}
   .editor-row-fields{grid-template-columns:1fr;}
 }
+
+/* ══ CLOUD AUTH ══ */
+.auth-overlay{position:fixed;inset:0;z-index:6000;display:flex;align-items:center;justify-content:center;
+  background:rgba(1,5,18,0.94);backdrop-filter:saturate(180%) blur(24px);-webkit-backdrop-filter:saturate(180%) blur(24px);}
+.auth-card{padding:38px 32px;max-width:340px;width:90%;text-align:center;}
+.auth-title{font-family:'Orbitron',sans-serif;font-size:16px;letter-spacing:3px;color:#c8e4ff;margin-bottom:10px;
+  text-shadow:0 0 24px rgba(56,150,220,0.35),0 0 2px rgba(255,255,255,0.2);}
+.auth-sub{font-size:12.5px;color:var(--text-dim);line-height:1.6;margin-bottom:24px;}
+.auth-google-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:13px;
+  border-radius:12px;border:1px solid rgba(255,255,255,0.14);background:rgba(255,255,255,0.06);
+  color:var(--text);font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:600;cursor:pointer;
+  transition:all .2s;}
+.auth-google-btn:hover{background:rgba(255,255,255,0.11);border-color:rgba(255,255,255,0.24);}
+.auth-google-btn:disabled{opacity:0.5;cursor:not-allowed;}
+.auth-error{margin-top:14px;font-size:11.5px;color:var(--red);line-height:1.5;}
+.auth-status{margin-top:16px;font-size:10.5px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;display:flex;align-items:center;justify-content:center;gap:8px;}
+.auth-status .pulse{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--cyan);box-shadow:0 0 5px rgba(56,182,212,0.5);animation:pulse-dot 1.6s infinite;}
+.auth-user-chip{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text-dim);letter-spacing:0.3px;}
+.auth-user-avatar{width:22px;height:22px;border-radius:50%;flex-shrink:0;background:rgba(56,150,212,0.18);border:1px solid rgba(56,150,212,0.30);}
+.signout-btn{font-family:'Orbitron',sans-serif;font-size:10.5px;letter-spacing:1.5px;text-transform:uppercase;
+  padding:8px 14px;border-radius:10px;border:1px solid rgba(255,255,255,0.10);background:rgba(255,255,255,0.03);
+  color:var(--text-dim);cursor:pointer;transition:all .2s;}
+.signout-btn:hover{border-color:rgba(255,255,255,0.22);color:var(--text);}
 </style>
+
+<!-- ══ FIREBASE (Cloud Sync) ══
+     Fill in YOUR_FIREBASE_CONFIG below with the values from
+     Firebase Console → Project Settings → General → Your apps → SDK setup and configuration.
+     Also enable: Authentication → Sign-in method → Google, and Firestore Database (production mode). -->
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
+
+<div class="auth-overlay" id="auth-overlay" style="display:none;">
+  <div class="auth-card glass">
+    <div class="auth-title">MISSION CONTROL</div>
+    <div class="auth-sub">Sign in to sync your streak, heatmap, schedule and progress across every device.</div>
+    <button class="auth-google-btn" id="auth-google-btn" onclick="signIn()">
+      <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.9 32.4 29.4 35 24 35c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 8 3l6-6C34.6 4.1 29.6 2 24 2 11.9 2 2 11.9 2 24s9.9 22 22 22 22-9.9 22-22c0-1.2-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 15.1 18.9 12 24 12c3.1 0 5.8 1.1 8 3l6-6C34.6 4.1 29.6 2 24 2 16 2 9.1 6.5 6.3 14.7z"/><path fill="#4CAF50" d="M24 46c5.5 0 10.4-1.9 14.3-5.1l-6.6-5.6C29.6 37 26.9 38 24 38c-5.3 0-9.8-3.6-11.4-8.4l-6.6 5.1C9 41.4 15.9 46 24 46z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.7 2.1-2 3.9-3.7 5.2l6.6 5.6C41.9 36.4 44 30.8 44 24c0-1.2-.1-2.4-.4-3.5z"/></svg>
+      Sign in with Google
+    </button>
+    <div class="auth-error" id="auth-error" style="display:none;"></div>
+    <div class="auth-status" id="auth-status" style="display:none;"><span class="pulse"></span><span>Connecting…</span></div>
+  </div>
+</div>
 
 <canvas id="matrix-canvas"></canvas>
 <div class="ambient"></div>
@@ -586,11 +630,13 @@ body{
   <div class="topbar">
     <div class="legend" id="legend"></div>
     <div style="display:flex;gap:10px;align-items:center;">
+      <span class="auth-user-chip" id="auth-user-chip" style="display:none;"></span>
       <button class="edit-btn" onclick="openEditor()" aria-label="Edit schedule">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4Z"/></svg>
         EDIT
       </button>
       <button class="reset-btn" onclick="resetData()">&#x27f2; Reset all data</button>
+      <button class="signout-btn" id="signout-btn" onclick="signOutUser()" style="display:none;">Sign out</button>
     </div>
   </div>
 
@@ -699,6 +745,178 @@ const RAIN_INTENSITY = 3;
   setInterval(draw,40);
 })();
 
+/* ═══════════════════════════════════════════════════════════════
+   CLOUD SYNC (Firebase Auth + Firestore)
+   Storage flow: every write still goes to localStorage instantly
+   (unchanged local logic — offline-safe, zero-latency UI), and is
+   also queued for a debounced write to Firestore. Firestore's own
+   offline persistence (enabled below) queues writes made while
+   offline and flushes them automatically once back online.
+   A snapshot listener applies changes made on OTHER devices, but
+   ignores our own optimistic writes (via metadata.hasPendingWrites)
+   so we never fight with ourselves.
+   ═══════════════════════════════════════════════════════════════ */
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT_ID.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID"
+};
+
+let fbApp=null, auth=null, db=null;
+let currentUser=null, dbRef=null, unsubscribeSnapshot=null, appStarted=false;
+let pendingCloudWrites={}, cloudWriteTimer=null;
+
+function firebaseReady(){
+  return firebaseConfig.apiKey && firebaseConfig.apiKey!=='YOUR_API_KEY' && typeof firebase!=='undefined';
+}
+
+function cloudSyncField(path,value){
+  if(!dbRef) return; // not signed in yet / cloud not configured — local save above still happened
+  pendingCloudWrites[path]=value;
+  clearTimeout(cloudWriteTimer);
+  cloudWriteTimer=setTimeout(flushCloudWrites,700);
+}
+
+function flushCloudWrites(){
+  if(!dbRef) return;
+  const writes=pendingCloudWrites;
+  pendingCloudWrites={};
+  if(Object.keys(writes).length===0) return;
+  writes.updatedAt=firebase.firestore.FieldValue.serverTimestamp();
+  dbRef.set(writes,{merge:true}).catch(e=>console.error('Cloud sync failed (change is still saved locally):',e));
+}
+
+function applyCloudData(data){
+  if(!data) return;
+  if(data.categories){
+    categories=data.categories.map(normalizeCategory);
+    try{localStorage.setItem(CAT_STORE_KEY,JSON.stringify(categories));}catch(e){}
+  }
+  if(data.dayGroups){
+    dayGroups=data.dayGroups;
+    try{localStorage.setItem(GROUP_CONFIG_KEY,JSON.stringify(dayGroups));}catch(e){}
+    DAY_TYPE=buildDayTypeMap(dayGroups);
+    todayDayType=DAY_TYPE[now.getDay()]||Object.keys(dayGroups)[0];
+  }
+  if(data.schedule){
+    D=data.schedule;
+    Object.keys(DEFAULT_D).forEach(k=>{if(!D[k])D[k]=deepClone(DEFAULT_D[k]);if(!Array.isArray(D[k].blocks))D[k].blocks=[];});
+    try{localStorage.setItem(SCHEDULE_STORE_KEY,JSON.stringify(D));}catch(e){}
+  }
+  if(data.completion){
+    store=data.completion;
+    try{localStorage.setItem(STORE_KEY,JSON.stringify(store));}catch(e){}
+  }
+  if(data.quote){
+    try{localStorage.setItem(QUOTE_STORE_KEY,JSON.stringify(data.quote));}catch(e){}
+  }
+  if(!D[active]||!dayGroups[active]) active=todayDayType;
+}
+
+async function startAppForUser(user){
+  currentUser=user;
+  dbRef=db.collection('dashboards').doc(user.uid);
+
+  const overlay=document.getElementById('auth-overlay');
+  if(overlay) overlay.style.display='none';
+  const chip=document.getElementById('auth-user-chip');
+  if(chip){
+    chip.style.display='flex';
+    chip.innerHTML=(user.photoURL?`<img class="auth-user-avatar" src="${user.photoURL}" alt="">`:`<span class="auth-user-avatar"></span>`)+`<span>${escapeHtml(user.displayName||user.email||'')}</span>`;
+  }
+  const signoutBtn=document.getElementById('signout-btn');
+  if(signoutBtn) signoutBtn.style.display='inline-block';
+
+  try{
+    const snap=await dbRef.get();
+    if(!snap.exists){
+      // First sign-in on this account: migrate whatever is currently in localStorage to the cloud.
+      const initialData={
+        categories:categories.map(normalizeCategory),
+        dayGroups:dayGroups,
+        schedule:D,
+        completion:store,
+        quote:getQuoteState(),
+        createdAt:firebase.firestore.FieldValue.serverTimestamp(),
+        updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+      };
+      await dbRef.set(initialData);
+    }else{
+      applyCloudData(snap.data());
+    }
+  }catch(e){
+    console.error('Cloud load failed, continuing with local data for now:',e);
+  }
+
+  if(unsubscribeSnapshot) unsubscribeSnapshot();
+  unsubscribeSnapshot=dbRef.onSnapshot({includeMetadataChanges:true},doc=>{
+    if(!doc.exists) return;
+    if(doc.metadata.hasPendingWrites) return; // this is our own optimistic write echoing back — already applied
+    applyCloudData(doc.data());
+    if(appStarted){renderLegend();renderTabs();render();renderStreak();}
+  },err=>console.error('Cloud sync listener error:',err));
+
+  if(!appStarted){appStarted=true;init();}
+  else{renderLegend();renderTabs();render();renderStreak();}
+}
+
+function signIn(){
+  const btn=document.getElementById('auth-google-btn');
+  const errEl=document.getElementById('auth-error');
+  const statusEl=document.getElementById('auth-status');
+  if(errEl) errEl.style.display='none';
+  if(btn) btn.disabled=true;
+  if(statusEl) statusEl.style.display='flex';
+  const provider=new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider).catch(e=>{
+    console.error('Sign-in failed:',e);
+    if(errEl){errEl.textContent='Sign-in failed. Please try again.';errEl.style.display='block';}
+  }).finally(()=>{
+    if(btn) btn.disabled=false;
+    if(statusEl) statusEl.style.display='none';
+  });
+}
+
+function signOutUser(){
+  if(unsubscribeSnapshot){unsubscribeSnapshot();unsubscribeSnapshot=null;}
+  auth.signOut();
+}
+
+function initFirebaseAuth(){
+  const overlay=document.getElementById('auth-overlay');
+  if(!firebaseReady()){
+    // No Firebase project configured yet — fall back to local-only mode so the
+    // dashboard still works exactly as before until firebaseConfig is filled in.
+    console.warn('Firebase is not configured (see firebaseConfig at top of the script). Running in local-only mode — data will not sync across devices.');
+    if(overlay) overlay.style.display='none';
+    if(!appStarted){appStarted=true;init();}
+    return;
+  }
+  fbApp=firebase.initializeApp(firebaseConfig);
+  auth=firebase.auth();
+  db=firebase.firestore();
+  db.enablePersistence({synchronizeTabs:true}).catch(err=>{
+    console.warn('Firestore offline persistence unavailable ('+err.code+'). Cloud sync still works while online.');
+  });
+
+  auth.onAuthStateChanged(user=>{
+    if(user){
+      startAppForUser(user);
+    }else{
+      currentUser=null;dbRef=null;
+      if(unsubscribeSnapshot){unsubscribeSnapshot();unsubscribeSnapshot=null;}
+      if(overlay) overlay.style.display='flex';
+      const chip=document.getElementById('auth-user-chip');
+      if(chip) chip.style.display='none';
+      const signoutBtn=document.getElementById('signout-btn');
+      if(signoutBtn) signoutBtn.style.display='none';
+    }
+  });
+}
+
 /* ═══ ANALOG MINI-CLOCK ═══ */
 (function(){
   const c=document.getElementById('analog-canvas');
@@ -744,7 +962,7 @@ function updateClock(){const n=new Date();let h=n.getHours();const ap=h>=12?'PM'
 const QUOTES=["Discipline beats motivation.","Small progress every day compounds.","Consistency creates opportunities.","Do the work even when you don't feel like it.","Success is earned daily.","The grind is the goal.","One more application. One more question.","Future you is watching. Don't embarrass him.","Comfort is the enemy of achievement.","Show up. Every single day.","Results don't care about your mood.","Be the person who didn't quit.","Hard work quietly defeats talent.","Every expert was once a beginner.","The gap between where you are and where you want to be is called work.","Stack small wins. Build momentum.","Tired is temporary. Regret lasts forever.","Your future self is built today.","No shortcuts. No excuses. No regrets.","Pressure creates diamonds.","One focused hour beats five distracted ones.","Chase progress, not perfection.","Rejection is redirection.","The best time to start was yesterday. The next best time is now.","Outwork your doubts.","Make today's effort tomorrow's advantage.","Ambition without action is daydreaming.","Every no is closer to a yes.","Earn the right to rest.","Mission incomplete. Keep going."];
 const QUOTE_STORE_KEY='mc_quote_state_v1';
 function getQuoteState(){try{const r=localStorage.getItem(QUOTE_STORE_KEY);if(r){const p=JSON.parse(r);if(p&&typeof p.idx==='number'&&p.ts)return p;}}catch(e){}return{idx:0,ts:Date.now()};}
-function saveQuoteState(s){try{localStorage.setItem(QUOTE_STORE_KEY,JSON.stringify(s));}catch(e){}}
+function saveQuoteState(s){try{localStorage.setItem(QUOTE_STORE_KEY,JSON.stringify(s));}catch(e){}cloudSyncField('quote',s);}
 function getCurrentQuote(){let state=getQuoteState();const now=Date.now();const hoursPassed=Math.floor((now-state.ts)/(1000*60*60));if(hoursPassed>0){state.idx=(state.idx+hoursPassed)%QUOTES.length;state.ts=state.ts+(hoursPassed*60*60*1000);saveQuoteState(state);}return{idx:state.idx,quote:QUOTES[state.idx]};}
 function getMinutesUntilNextQuote(){const state=getQuoteState();const now=Date.now();const msUntilNext=3600000-((now-state.ts)%3600000);return Math.ceil(msUntilNext/60000);}
 
@@ -775,7 +993,9 @@ function loadCategories(){
   return JSON.parse(JSON.stringify(DEFAULT_CATEGORIES));
 }
 function saveCategories(){
-  try{localStorage.setItem(CAT_STORE_KEY,JSON.stringify(categories.map(normalizeCategory)));}catch(e){}
+  const normalized=categories.map(normalizeCategory);
+  try{localStorage.setItem(CAT_STORE_KEY,JSON.stringify(normalized));}catch(e){}
+  cloudSyncField('categories',normalized);
 }
 let categories=loadCategories();
 
@@ -801,7 +1021,7 @@ function loadDayGroups(){
   try{const r=localStorage.getItem(GROUP_CONFIG_KEY);if(r){const p=JSON.parse(r);if(p&&typeof p==="object"&&Object.keys(p).length>0)return p;}}catch(e){}
   return deepCloneGroups(DEFAULT_DAY_GROUPS);
 }
-function saveDayGroups(){try{localStorage.setItem(GROUP_CONFIG_KEY,JSON.stringify(dayGroups));}catch(e){}}
+function saveDayGroups(){try{localStorage.setItem(GROUP_CONFIG_KEY,JSON.stringify(dayGroups));}catch(e){}cloudSyncField('dayGroups',dayGroups);}
 let dayGroups=loadDayGroups();
 function buildDayTypeMap(groups){const map={};Object.keys(groups).forEach(name=>{groups[name].forEach(d=>{map[d]=name;});});return map;}
 let DAY_TYPE=buildDayTypeMap(dayGroups);
@@ -906,7 +1126,7 @@ function loadSchedule(){
   }catch(e){}
   return deepClone(DEFAULT_D);
 }
-function saveSchedule(){try{localStorage.setItem(SCHEDULE_STORE_KEY,JSON.stringify(D));}catch(e){}}
+function saveSchedule(){try{localStorage.setItem(SCHEDULE_STORE_KEY,JSON.stringify(D));}catch(e){}cloudSyncField('schedule',D);}
 let D=loadSchedule();
 Object.keys(DEFAULT_D).forEach(k=>{if(!D[k])D[k]=deepClone(DEFAULT_D[k]);if(!Array.isArray(D[k].blocks))D[k].blocks=[];});
 function ensureGroupKeysInD(){
@@ -923,6 +1143,8 @@ ensureGroupKeysInD();
 const STORE_KEY='sched_tracker_v4';
 function loadStore(){try{const r=localStorage.getItem(STORE_KEY);return r?JSON.parse(r):{}}catch(e){return{}}}
 function saveStore(s){try{localStorage.setItem(STORE_KEY,JSON.stringify(s))}catch(e){}}
+/* Completion data is synced per-day (see toggle()/confirmReset()) so that two devices
+   editing different days never clobber each other's data. */
 let store=loadStore();
 
 function todayKey(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
@@ -1124,7 +1346,7 @@ function toggle(idx){
   const status=getStatus(idx,block);
   if(status==='open'){if(!store[todayK]) store[todayK]={};store[todayK][idx]=true;}
   else if(status==='done'){const endMin=toMinutes(block.e),startMin=toMinutes(block.s);if(nowMin>=startMin&&nowMin<=endMin){if(store[todayK]) delete store[todayK][idx];}}
-  saveStore(store);render();renderStreakCounter();}
+  saveStore(store);cloudSyncField('completion.'+todayK,store[todayK]||{});render();renderStreakCounter();}
 
 function render(){
   const s=D[active];
@@ -1296,7 +1518,7 @@ function resetData(){
 function confirmReset(yes){
   document.getElementById('confirm-overlay').style.display='none';
   if(!yes) return;
-  store={};saveStore(store);
+  store={};saveStore(store);cloudSyncField('completion',{});
   D=deepClone(DEFAULT_D);saveSchedule();
   dayGroups=deepCloneGroups(DEFAULT_DAY_GROUPS);saveDayGroups();
   categories=JSON.parse(JSON.stringify(DEFAULT_CATEGORIES));saveCategories();
