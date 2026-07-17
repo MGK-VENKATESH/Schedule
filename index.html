@@ -1521,8 +1521,16 @@ function render(){
     const m=catMins[cat.v];
     if(!m) return;
     const dur=fmtDuration(m);
-    const onclick='openCatInfoPage("'+cat.v+'")';
-    statsHTML+=`<div class="stat" onclick="${onclick}" style="--accent:${cat.color}"><div class="stat-l">${cat.label}</div><div class="stat-v">${dur}</div></div>`;
+    // NOTE: this onclick attribute is itself wrapped in double quotes
+    // (onclick="..."), so the JS call inside it must use single quotes
+    // around the string argument. Using double quotes here (as a previous
+    // version did) breaks the HTML attribute the moment it hits cat.v's
+    // value — the browser closes the attribute early at the first embedded
+    // ", leaving a truncated/invalid onclick that silently does nothing on
+    // click. escapeAttr() also neutralises any stray single quote/HTML in
+    // a category id so a custom category can never re-break this.
+    const onclick="openCatInfoPage('"+escapeAttr(cat.v).replace(/'/g,"&#39;")+"')";
+    statsHTML+=`<div class="stat" onclick="${onclick}" style="--accent:${cat.color}"><div class="stat-l">${escapeHtml(cat.label)}</div><div class="stat-v">${dur}</div></div>`;
   });
 
   statsHTML+=`<div class="stat" onclick="openQuotePanel()" style="--accent:var(--amber)"><div class="stat-l">Today's Fuel</div><div class="stat-v small"><span style="color:var(--amber)">"</span>${shortQuote}<span style="color:var(--amber)">"</span></div></div>`;
