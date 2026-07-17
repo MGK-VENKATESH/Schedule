@@ -1110,20 +1110,66 @@ function getMinutesUntilNextQuote(){const state=getQuoteState();const now=Date.n
 
 /* ═══ CATEGORY SYSTEM ═══ */
 const CAT_STORE_KEY='sched_categories_v1';
+const SSC_DEFAULT_SECTIONS=[
+  {title:'Quantitative Aptitude',color:'#2aaa8e',tags:['Number System','Percentage','Profit & Loss','Ratio & Proportion','Time & Work','Time, Speed & Distance','Algebra','Geometry','Mensuration','Trigonometry','Statistics','Data Interpretation'].map(t=>({label:t,url:''}))},
+  {title:'General Intelligence & Reasoning',color:'#7c6ec7',tags:['Analogy','Classification','Coding-Decoding','Blood Relations','Direction Sense','Series','Venn Diagrams','Syllogism','Non-verbal Reasoning','Puzzles'].map(t=>({label:t,url:''}))},
+  {title:'English Language',color:'#3a7ecf',tags:['Grammar','Vocabulary','Synonyms','Antonyms','Cloze Test','Reading Comprehension','Error Spotting','Sentence Improvement'].map(t=>({label:t,url:''}))},
+  {title:'General Awareness',color:'#c9893a',tags:['History','Geography','Polity','Economy','Science','Current Affairs','Static GK'].map(t=>({label:t,url:''}))},
+];
+const JOB_DEFAULT_SECTIONS=[
+  {title:'Job Portals',color:'#3a7ecf',tags:[
+    {label:'LinkedIn',url:'https://linkedin.com/jobs'},
+    {label:'Naukri',url:'https://naukri.com'},
+    {label:'Foundit',url:'https://foundit.in'},
+    {label:'Wellfound',url:'https://wellfound.com'},
+    {label:'Internshala',url:'https://internshala.com'},
+    {label:'Cutshort',url:'https://cutshort.io'},
+    {label:'Indeed',url:'https://indeed.co.in'},
+    {label:'Glassdoor',url:'https://glassdoor.co.in'},
+    {label:'Hirist',url:'https://hirist.tech'},
+    {label:'HackerEarth Jobs',url:'https://hackerearth.com/jobs'},
+    {label:'Instahyre',url:'https://instahyre.com'},
+    {label:'Freshersworld',url:'https://freshersworld.com'},
+    {label:'TimesJobs',url:'https://timesjobs.com'},
+    {label:'Shine',url:'https://shine.com'},
+    {label:'Apna',url:'https://apna.co'},
+  ]},
+];
+const CODE_DEFAULT_SECTIONS=[
+  {title:'DSA Practice',color:'#7c6ec7',tags:['LeetCode','HackerRank','Codeforces','CodeChef','HackerEarth','Coding Ninjas'].map(t=>({label:t,url:''}))},
+  {title:'SQL Practice',color:'#2aaa8e',tags:['LeetCode SQL','HackerRank SQL','GeeksforGeeks SQL','Coderbyte'].map(t=>({label:t,url:''}))},
+  {title:'Python Practice',color:'#c9893a',tags:['Exercism','HackerRank Python','GeeksforGeeks','Coderbyte'].map(t=>({label:t,url:''}))},
+  {title:'Interview Preparation',color:'#3a7ecf',tags:['InterviewBit','GeeksforGeeks','LeetCode Explore','Coding Ninjas Studio'].map(t=>({label:t,url:''}))},
+];
 const DEFAULT_CATEGORIES=[
-  {v:'ssc',  label:'SSC CGL',   color:'#2aaa8e', notes:''},
-  {v:'job',  label:'JOB HUNT',  color:'#3a7ecf', notes:''},
-  {v:'code', label:'CODING',    color:'#7c6ec7', notes:''},
-  {v:'loop', label:'LOOPHOLE',  color:'#c9893a', notes:''},
-  {v:'brk',  label:'BREAK',     color:'#3a4a5c', notes:''},
+  {v:'ssc',  label:'SSC CGL',   color:'#2aaa8e', notes:'', popup:{sections:SSC_DEFAULT_SECTIONS}},
+  {v:'job',  label:'JOB HUNT',  color:'#3a7ecf', notes:'Check company career pages daily and apply directly whenever possible. Direct applications bypass ATS filters and are seen by hiring managers faster.', popup:{sections:JOB_DEFAULT_SECTIONS}},
+  {v:'code', label:'CODING',    color:'#7c6ec7', notes:'', popup:{sections:CODE_DEFAULT_SECTIONS}},
+  {v:'loop', label:'LOOPHOLE',  color:'#c9893a', notes:'', popup:{sections:[]}},
+  {v:'brk',  label:'BREAK',     color:'#3a4a5c', notes:'', popup:{sections:[]}},
 ];
 
+function normalizeTag(t){
+  if(typeof t==='string') return {label:t,url:''};
+  return {label:String(t&&t.label||''), url:String(t&&t.url||'')};
+}
+function normalizeSection(s){
+  return {
+    title:String(s&&s.title||'Section'),
+    color:String(s&&s.color||'#3a7ecf'),
+    tags:Array.isArray(s&&s.tags)?s.tags.map(normalizeTag):[]
+  };
+}
+function normalizePopup(p){
+  return {sections:(p&&Array.isArray(p.sections))?p.sections.map(normalizeSection):[]};
+}
 function normalizeCategory(cat){
   return {
     v:String(cat&&cat.v||('cat_'+Date.now())),
     label:String(cat&&cat.label||'NEW CATEGORY'),
     color:String(cat&&cat.color||'#4a7acf'),
-    notes:String(cat&&cat.notes||'')
+    notes:String(cat&&cat.notes||''),
+    popup:normalizePopup(cat&&cat.popup)
   };
 }
 
@@ -1141,13 +1187,23 @@ function saveCategories(){
 }
 let categories=loadCategories();
 
-function getCatByVal(v){return categories.find(c=>c.v===v)||{v,label:v.toUpperCase(),color:'#4a6a8a',notes:''};}
+function getCatByVal(v){return categories.find(c=>c.v===v)||{v,label:v.toUpperCase(),color:'#4a6a8a',notes:'',popup:{sections:[]}};}
 function catColor(v){return getCatByVal(v).color;}
 function catLabel(v){return getCatByVal(v).label;}
 function catOptionsHTML(selected){return categories.map(o=>`<option value="${o.v}"${o.v===selected?' selected':''}>${o.label}</option>`).join('');}
 
 function getTrackedCats(){
   return new Set(categories.filter(c=>c.v!=='brk').map(c=>c.v));
+}
+
+/* ═══ COLOR HELPER ═══ */
+function hexToRgba(hex,alpha){
+  let h=String(hex||'#3a7ecf').replace('#','');
+  if(h.length===3) h=h.split('').map(c=>c+c).join('');
+  const num=parseInt(h,16);
+  if(isNaN(num)) return `rgba(58,126,207,${alpha})`;
+  const r=(num>>16)&255,g=(num>>8)&255,b=num&255;
+  return `rgba(${r},${g},${b},${alpha})`;
 }
 
 /* ═══ APP DATA (DEFAULTS) ═══ */
@@ -1355,13 +1411,31 @@ function closeModal(){
 }
 function closeModalOnBackdrop(e){if(e.target===document.getElementById('modal-backdrop'))closeModal();}
 
-/* ═══ CATEGORY INFO PAGE ═══ */
+/* ═══ GENERIC CATEGORY INFO PAGE (data-driven, works for every category) ═══ */
+function renderPopupSectionHTML(section){
+  const c=section.color||'#3a7ecf';
+  const titleStyle=`color:${c};background:${hexToRgba(c,0.07)};border:1px solid ${hexToRgba(c,0.18)}`;
+  const tagsHTML=(section.tags||[]).map(t=>{
+    const tagStyle=`background:${hexToRgba(c,0.09)};color:${c};border:1px solid ${hexToRgba(c,0.20)}`;
+    const chip=`<span class="ssc-tag" style="${tagStyle}">${escapeHtml(t.label)}</span>`;
+    return t.url?`<a href="${escapeAttr(t.url)}" target="_blank" rel="noopener" style="text-decoration:none">${chip}</a>`:chip;
+  }).join('');
+  return `<div class="ssc-section"><div class="ssc-section-title" style="${titleStyle}">${escapeHtml(section.title)}<span style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:9px;opacity:0.5">${(section.tags||[]).length} topics</span></div><div class="ssc-topics">${tagsHTML}</div></div>`;
+}
 function openCatInfoPage(catVal){
   const cat=getCatByVal(catVal);
   const blocks=D[active]?D[active].blocks||[]:[];
   const mins=calcCatMinutes(blocks,catVal);
   const dur=fmtDuration(mins);
-  const notes=cat.notes||'';
+  const notes=(cat.notes||'').trim();
+  const sections=(cat.popup&&Array.isArray(cat.popup.sections))?cat.popup.sections:[];
+  let body='';
+  if(notes) body+=`<div class="cat-info-notes" style="margin-bottom:18px">${escapeHtml(notes)}</div>`;
+  if(sections.length){
+    body+=sections.map(renderPopupSectionHTML).join('');
+  }else if(!notes){
+    body=`<div class="cat-info-empty">No information has been added for this category yet.<br><span style="font-size:11px;opacity:0.6">Open the editor → Categories → Manage Info Page to add one.</span></div>`;
+  }
   const html=`
     <div class="cat-info-meta">
       <div>
@@ -1371,88 +1445,10 @@ function openCatInfoPage(catVal){
       <div style="width:1px;background:rgba(255,255,255,0.07);align-self:stretch;"></div>
       <div style="font-size:12px;color:var(--text-dim);">${blocks.filter(b=>b.c===catVal).length} tasks scheduled</div>
     </div>
-    ${notes.trim()
-      ? `<div class="cat-info-notes">${escapeHtml(notes)}</div>`
-      : `<div class="cat-info-empty">No notes added for this category yet.<br><span style="font-size:11px;opacity:0.6">Open the editor → Categories to add notes.</span></div>`}
+    ${body}
   `;
   openModal(cat.label, html, cat.color);
 }
-
-/* Legacy panel openers for original category ids */
-function openSSCPanel(){
-  const cat=getCatByVal('ssc');
-  const blocks=D[active]?D[active].blocks||[]:[];
-  const mins=calcCatMinutes(blocks,'ssc');
-  const dur=fmtDuration(mins);
-  const customNotes=cat.notes||'';
-  const sections=[
-    {t:'Quantitative Aptitude',cls:'qa',num:'01',topics:['Number System','Percentage','Profit & Loss','Ratio & Proportion','Time & Work','Time, Speed & Distance','Algebra','Geometry','Mensuration','Trigonometry','Statistics','Data Interpretation']},
-    {t:'General Intelligence & Reasoning',cls:'gi',num:'02',topics:['Analogy','Classification','Coding-Decoding','Blood Relations','Direction Sense','Series','Venn Diagrams','Syllogism','Non-verbal Reasoning','Puzzles']},
-    {t:'English Language',cls:'en',num:'03',topics:['Grammar','Vocabulary','Synonyms','Antonyms','Cloze Test','Reading Comprehension','Error Spotting','Sentence Improvement']},
-    {t:'General Awareness',cls:'ga',num:'04',topics:['History','Geography','Polity','Economy','Science','Current Affairs','Static GK']},
-  ];
-  const syllabusHTML=sections.map(s=>`<div class="ssc-section"><div class="ssc-section-title ${s.cls}"><span class="ssc-num">${s.num}</span>${s.t}<span style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:9px;opacity:0.5">${s.topics.length} topics</span></div><div class="ssc-topics">${s.topics.map(t=>`<span class="ssc-tag ${s.cls}">${t}</span>`).join('')}</div></div>`).join('');
-  const html=`
-    <div class="cat-info-meta">
-      <div><div class="cat-info-hours" style="color:${cat.color}">${dur}</div><div style="font-size:11px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;">Today's allocation</div></div>
-    </div>
-    ${customNotes.trim()?`<div class="cat-info-notes" style="margin-bottom:18px">${escapeHtml(customNotes)}</div>`:''}
-    ${syllabusHTML}`;
-  openModal(cat.label+' TIER-1 SYLLABUS',html,cat.color);}
-
-function openJobPanel(){
-  const cat=getCatByVal('job');
-  const blocks=D[active]?D[active].blocks||[]:[];
-  const mins=calcCatMinutes(blocks,'job');
-  const dur=fmtDuration(mins);
-  const customNotes=cat.notes||'';
-  const platforms=[
-    {name:'LinkedIn',sub:'Top recruiter reach',icon:'💼',url:'https://linkedin.com/jobs'},
-    {name:'Naukri',sub:'India #1',icon:'🔍',url:'https://naukri.com'},
-    {name:'Foundit',sub:'Formerly Monster',icon:'🎯',url:'https://foundit.in'},
-    {name:'Wellfound',sub:'Startups & tech',icon:'🚀',url:'https://wellfound.com'},
-    {name:'Internshala',sub:'Internships + jobs',icon:'🎓',url:'https://internshala.com'},
-    {name:'Cutshort',sub:'Tech-focused',icon:'⚡',url:'https://cutshort.io'},
-    {name:'Indeed',sub:'Global listings',icon:'🌐',url:'https://indeed.co.in'},
-    {name:'Glassdoor',sub:'Reviews + jobs',icon:'🏢',url:'https://glassdoor.co.in'},
-    {name:'Hirist',sub:'Tech jobs India',icon:'💻',url:'https://hirist.tech'},
-    {name:'HackerEarth Jobs',sub:'Dev-specific',icon:'🛠️',url:'https://hackerearth.com/jobs'},
-    {name:'Instahyre',sub:'AI-matched roles',icon:'🤖',url:'https://instahyre.com'},
-    {name:'Freshersworld',sub:'Entry-level',icon:'🌱',url:'https://freshersworld.com'},
-    {name:'TimesJobs',sub:'Broad reach',icon:'📰',url:'https://timesjobs.com'},
-    {name:'Shine',sub:'Mid-segment',icon:'✨',url:'https://shine.com'},
-    {name:'Apna',sub:'Blue + white collar',icon:'📱',url:'https://apna.co'},
-  ];
-  const cards=platforms.map(p=>`<a class="job-card" href="${p.url}" target="_blank" rel="noopener"><div class="job-card-icon">${p.icon}</div><div><div class="job-card-name">${p.name}</div><div class="job-card-sub">${p.sub}</div></div></a>`).join('');
-  const html=`
-    <div class="cat-info-meta">
-      <div><div class="cat-info-hours" style="color:${cat.color}">${dur}</div><div style="font-size:11px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;">Today's allocation</div></div>
-    </div>
-    ${customNotes.trim()?`<div class="cat-info-notes" style="margin-bottom:18px">${escapeHtml(customNotes)}</div>`:''}
-    <div class="job-section-head">Job Portals</div><div class="job-platform-grid">${cards}</div>
-    <div class="job-section-head" style="margin-top:8px;">Direct Company Career Pages</div>
-    <div class="job-careers-box"><b>Check company career pages daily and apply directly whenever possible.</b><br><br>Direct applications bypass ATS filters and are seen by hiring managers faster.</div>`;
-  openModal(cat.label+' PLATFORMS',html,cat.color);}
-
-function openCodingPanel(){
-  const cat=getCatByVal('code');
-  const blocks=D[active]?D[active].blocks||[]:[];
-  const mins=calcCatMinutes(blocks,'code');
-  const dur=fmtDuration(mins);
-  const customNotes=cat.notes||'';
-  const cats2=[
-    {t:'DSA Practice',cls:'',platforms:['LeetCode','HackerRank','Codeforces','CodeChef','HackerEarth','Coding Ninjas']},
-    {t:'SQL Practice',cls:'sql',platforms:['LeetCode SQL','HackerRank SQL','GeeksforGeeks SQL','Coderbyte']},
-    {t:'Python Practice',cls:'py',platforms:['Exercism','HackerRank Python','GeeksforGeeks','Coderbyte']},
-    {t:'Interview Preparation',cls:'iv',platforms:['InterviewBit','GeeksforGeeks','LeetCode Explore','Coding Ninjas Studio']},
-  ];
-  const html=`
-    <div class="cat-info-meta">
-      <div><div class="cat-info-hours" style="color:${cat.color}">${dur}</div><div style="font-size:11px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;">Today's allocation</div></div>
-    </div>
-    ${customNotes.trim()?`<div class="cat-info-notes" style="margin-bottom:18px">${escapeHtml(customNotes)}</div>`:''}
-    ${cats2.map(cat2=>`<div class="code-category"><div class="code-cat-title">${cat2.t}</div><div class="code-platform-list">${cat2.platforms.map(p=>`<div class="code-badge ${cat2.cls}"><span class="code-dot"></span>${p}</div>`).join('')}</div></div>`).join('')}`;
-  openModal(cat.label+' PLATFORMS',html,cat.color);}
 
 function openQuotePanel(){
   const{idx,quote}=getCurrentQuote();const mins=getMinutesUntilNextQuote();
@@ -1525,10 +1521,7 @@ function render(){
     const m=catMins[cat.v];
     if(!m) return;
     const dur=fmtDuration(m);
-    let onclick='openCatInfoPage("'+cat.v+'")';
-    if(cat.v==='ssc') onclick='openSSCPanel()';
-    else if(cat.v==='job') onclick='openJobPanel()';
-    else if(cat.v==='code') onclick='openCodingPanel()';
+    const onclick='openCatInfoPage("'+cat.v+'")';
     statsHTML+=`<div class="stat" onclick="${onclick}" style="--accent:${cat.color}"><div class="stat-l">${cat.label}</div><div class="stat-v">${dur}</div></div>`;
   });
 
@@ -1696,6 +1689,8 @@ let editorSection='groups';       // 'groups' | 'categories' | 'tasks' | 'settin
 let editorGroupEditing=null;      // draft group key currently open in the day-selector panel, or null
 let editorCategoryEditingIdx=null;// index into editorCategories currently open, or null
 let editorTaskEditingIdx=null;    // index into D[editorActiveTab].blocks currently open, or null
+let editorPopupCatIdx=null;       // index into editorCategories whose info-page popup is being built, or null
+let editorPopupSectionIdx=null;   // index into that category's popup.sections currently open, or null
 
 const ALL_DAYS=[
   {idx:0,label:'Sun'},{idx:1,label:'Mon'},{idx:2,label:'Tue'},
@@ -1812,7 +1807,7 @@ function catMgrDelete(i){
   renderEditorSection();
 }
 function editorAddCategory(){
-  editorCategories.push({v:'cat_'+Date.now(),label:'NEW CATEGORY',color:'#4a7acf',notes:''});
+  editorCategories.push({v:'cat_'+Date.now(),label:'NEW CATEGORY',color:'#4a7acf',notes:'',popup:{sections:[]}});
   editorCategoryEditingIdx=editorCategories.length-1;
   renderEditorSection();
 }
@@ -1824,6 +1819,8 @@ function openEditor(){
   editorGroupEditing=null;
   editorCategoryEditingIdx=null;
   editorTaskEditingIdx=null;
+  editorPopupCatIdx=null;
+  editorPopupSectionIdx=null;
   catMgrStart();
   dgmStartEdit();
   const editorHTML=`
@@ -1848,6 +1845,7 @@ function renderEditorSectionTabs(){
 function switchEditorSection(id){
   editorSection=id;
   editorGroupEditing=null;editorCategoryEditingIdx=null;editorTaskEditingIdx=null;
+  editorPopupCatIdx=null;editorPopupSectionIdx=null;
   renderEditorSectionTabs();
   renderEditorSection();
 }
@@ -1925,22 +1923,34 @@ function renderGroupEditPanel(key){
 
 /* ── CATEGORIES SECTION ── */
 function renderCategoriesSection(){
+  if(editorPopupCatIdx!==null && editorCategories[editorPopupCatIdx]!==undefined){
+    return renderPopupEditor();
+  }
+  editorPopupCatIdx=null;
   if(editorCategoryEditingIdx!==null && editorCategories[editorCategoryEditingIdx]!==undefined){
     return renderCategoryEditPanel(editorCategoryEditingIdx);
   }
   editorCategoryEditingIdx=null;
-  const rows=editorCategories.map((cat,i)=>`<div class="ed-list-row">
+  const rows=editorCategories.map((cat,i)=>{
+    const secCount=(cat.popup&&cat.popup.sections)?cat.popup.sections.length:0;
+    const hasNotes=cat.notes&&cat.notes.trim();
+    const parts=[];
+    if(secCount) parts.push(secCount+' section'+(secCount===1?'':'s'));
+    if(hasNotes) parts.push('Notes');
+    const sub=parts.length?parts.join(' · '):'No info page yet';
+    return `<div class="ed-list-row">
       <span class="cat-mgr-swatch" style="background:${cat.color}"></span>
       <div class="ed-list-main">
         <div class="ed-list-title">${escapeHtml(cat.label)}</div>
-        <div class="ed-list-sub">${cat.notes&&cat.notes.trim()?'Has notes':'No notes'}</div>
+        <div class="ed-list-sub">${sub}</div>
       </div>
       <div class="ed-list-actions">
         <button class="ed-mini-btn" onclick="editorEditCategory(${i})">Edit</button>
         <button class="ed-mini-btn danger" onclick="catMgrDelete(${i})">Delete</button>
       </div>
-    </div>`).join('');
-  return `<div class="ed-section-intro">Categories control color-coding, the dashboard legend, and the info page shown when you tap a stat card.</div>
+    </div>`;
+  }).join('');
+  return `<div class="ed-section-intro">Categories control color-coding, the dashboard legend, and the info page shown when you tap a stat card. Every category — SSC CGL, Job Hunt, or any category you create — can have its own info page.</div>
     <div class="ed-list">${rows||'<div class="ed-list-empty">No categories yet.</div>'}</div>
     <button class="ed-add-btn" onclick="editorAddCategory()">+ Add Category</button>`;
 }
@@ -1948,6 +1958,8 @@ function editorEditCategory(i){ editorCategoryEditingIdx=i; renderEditorSection(
 function editorCloseCategoryPanel(){ editorCategoryEditingIdx=null; renderEditorSection(); }
 function renderCategoryEditPanel(i){
   const cat=editorCategories[i];
+  if(!cat.popup) cat.popup={sections:[]};
+  const secCount=cat.popup.sections.length;
   return `<button class="ed-back-btn" onclick="editorCloseCategoryPanel()">&#8592; Back to Categories</button>
     <div class="ed-edit-panel">
       <div class="ed-field"><label>Color</label>
@@ -1956,7 +1968,91 @@ function renderCategoryEditPanel(i){
         </div>
       </div>
       <div class="ed-field"><label>Name</label><input type="text" value="${escapeAttr(cat.label)}" oninput="catMgrSetName(${i},this.value)"></div>
-      <div class="ed-field"><label>Notes</label><textarea class="cat-notes-area" placeholder="e.g. Tier 1 syllabus, study resources, weekly targets..." oninput="editorCategories[${i}].notes=this.value">${escapeHtml(cat.notes||'')}</textarea></div>
+      <div class="ed-field"><label>Notes</label><textarea class="cat-notes-area" placeholder="Short freeform text shown above the sections in the popup..." oninput="editorCategories[${i}].notes=this.value">${escapeHtml(cat.notes||'')}</textarea></div>
+      <div class="ed-field"><label>Info Page</label>
+        <button class="ed-mini-btn" style="align-self:flex-start" onclick="openPopupEditor(${i})">Manage Info Page${secCount?' ('+secCount+' section'+(secCount===1?'':'s')+')':''}</button>
+      </div>
+    </div>`;
+}
+
+/* ── CATEGORY INFO-PAGE (POPUP) EDITOR ── */
+function openPopupEditor(i){
+  if(!editorCategories[i].popup) editorCategories[i].popup={sections:[]};
+  editorPopupCatIdx=i;
+  editorPopupSectionIdx=null;
+  renderEditorSection();
+}
+function closePopupEditor(){ editorPopupCatIdx=null; editorPopupSectionIdx=null; renderEditorSection(); }
+function renderPopupEditor(){
+  const cat=editorCategories[editorPopupCatIdx];
+  if(!cat.popup) cat.popup={sections:[]};
+  if(editorPopupSectionIdx!==null && cat.popup.sections[editorPopupSectionIdx]!==undefined){
+    return renderPopupSectionEditPanel(editorPopupSectionIdx);
+  }
+  editorPopupSectionIdx=null;
+  const rows=cat.popup.sections.map((sec,si)=>`<div class="ed-list-row">
+      <span class="cat-mgr-swatch" style="background:${sec.color}"></span>
+      <div class="ed-list-main">
+        <div class="ed-list-title">${escapeHtml(sec.title)}</div>
+        <div class="ed-list-sub">${(sec.tags||[]).length} topic${(sec.tags||[]).length===1?'':'s'}</div>
+      </div>
+      <div class="ed-list-actions">
+        <button class="ed-mini-btn" onclick="popupEditSection(${si})">Edit</button>
+        <button class="ed-mini-btn danger" onclick="popupDeleteSection(${si})">Delete</button>
+      </div>
+    </div>`).join('');
+  return `<button class="ed-back-btn" onclick="closePopupEditor()">&#8592; Back to ${escapeHtml(cat.label)}</button>
+    <div class="ed-section-intro">Build the info popup for <b>${escapeHtml(cat.label)}</b>. Add sections, each with a title, a color, and topic chips — exactly what appears when you tap this category's stat card on the dashboard.</div>
+    <div class="ed-list">${rows||'<div class="ed-list-empty">No sections yet.</div>'}</div>
+    <button class="ed-add-btn" onclick="popupAddSection()">+ Add Section</button>`;
+}
+function popupEditSection(si){ editorPopupSectionIdx=si; renderEditorSection(); }
+function popupAddSection(){
+  const cat=editorCategories[editorPopupCatIdx];
+  cat.popup.sections.push({title:'New Section',color:cat.color||'#3a7ecf',tags:[]});
+  editorPopupSectionIdx=cat.popup.sections.length-1;
+  renderEditorSection();
+}
+function popupDeleteSection(si){
+  if(!confirm('Delete this section?')) return;
+  editorCategories[editorPopupCatIdx].popup.sections.splice(si,1);
+  renderEditorSection();
+}
+function popupSectionBack(){ editorPopupSectionIdx=null; renderEditorSection(); }
+function popupSetSectionTitle(si,val){ editorCategories[editorPopupCatIdx].popup.sections[si].title=val; }
+function popupSetSectionColor(si,val){ editorCategories[editorPopupCatIdx].popup.sections[si].color=val; }
+function popupAddTag(si){
+  editorCategories[editorPopupCatIdx].popup.sections[si].tags.push({label:'New Topic',url:''});
+  renderEditorSection();
+}
+function popupSetTagLabel(si,ti,val){ editorCategories[editorPopupCatIdx].popup.sections[si].tags[ti].label=val; }
+function popupSetTagUrl(si,ti,val){ editorCategories[editorPopupCatIdx].popup.sections[si].tags[ti].url=val; }
+function popupDeleteTag(si,ti){
+  editorCategories[editorPopupCatIdx].popup.sections[si].tags.splice(ti,1);
+  renderEditorSection();
+}
+function renderPopupSectionEditPanel(si){
+  const cat=editorCategories[editorPopupCatIdx];
+  const sec=cat.popup.sections[si];
+  const tagsHTML=(sec.tags||[]).map((t,ti)=>`
+    <div class="editor-row">
+      <div class="editor-row-fields">
+        <div class="ed-field"><label>Label</label><input type="text" value="${escapeAttr(t.label)}" oninput="popupSetTagLabel(${si},${ti},this.value)"></div>
+        <div class="ed-field"><label>Link (optional)</label><input type="text" placeholder="https://..." value="${escapeAttr(t.url||'')}" oninput="popupSetTagUrl(${si},${ti},this.value)"></div>
+      </div>
+      <button class="ed-mini-btn danger" style="align-self:flex-end" onclick="popupDeleteTag(${si},${ti})">Delete Topic</button>
+    </div>`).join('');
+  return `<button class="ed-back-btn" onclick="popupSectionBack()">&#8592; Back to Sections</button>
+    <div class="ed-edit-panel">
+      <div class="ed-field"><label>Section Title</label><input type="text" value="${escapeAttr(sec.title)}" oninput="popupSetSectionTitle(${si},this.value)"></div>
+      <div class="ed-field"><label>Section Color</label>
+        <div class="cat-mgr-swatch" style="background:${sec.color};width:32px;height:32px;border-radius:8px;">
+          <input type="color" value="${sec.color}" onchange="popupSetSectionColor(${si},this.value);renderEditorSection()">
+        </div>
+      </div>
+      <div class="ed-field"><label>Topics</label></div>
+      <div class="ed-list">${tagsHTML||'<div class="ed-list-empty">No topics yet.</div>'}</div>
+      <button class="ed-add-btn" onclick="popupAddTag(${si})">+ Add Topic</button>
     </div>`;
 }
 
@@ -2101,6 +2197,7 @@ function editorResetConfirm(){
   editorActiveTab=active;
   dgmStartEdit();
   editorSection='groups';editorGroupEditing=null;editorCategoryEditingIdx=null;editorTaskEditingIdx=null;
+  editorPopupCatIdx=null;editorPopupSectionIdx=null;
   renderEditorSectionTabs();renderEditorSection();
   renderLegend();renderTabs();render();renderStreak();
 }
