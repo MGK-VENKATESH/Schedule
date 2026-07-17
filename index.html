@@ -562,6 +562,17 @@ body{
   padding:8px 14px;border-radius:10px;border:1px solid rgba(255,255,255,0.10);background:rgba(255,255,255,0.03);
   color:var(--text-dim);cursor:pointer;transition:all .2s;}
 .signout-btn:hover{border-color:rgba(255,255,255,0.22);color:var(--text);}
+
+/* ══ SYNC STATUS ══ */
+.sync-chip{display:flex;align-items:center;gap:6px;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text-dim);padding:6px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);transition:all .25s;}
+.sync-chip .sync-dot{width:6px;height:6px;border-radius:50%;background:var(--text-dim);flex-shrink:0;transition:all .25s;}
+.sync-chip.syncing{color:#8ec8e8;border-color:rgba(56,150,212,0.25);background:rgba(56,150,212,0.06);}
+.sync-chip.syncing .sync-dot{background:var(--cyan);box-shadow:0 0 5px rgba(56,182,212,0.6);animation:pulse-dot 1s infinite;}
+.sync-chip.synced{color:var(--teal);border-color:rgba(42,170,142,0.25);background:rgba(42,170,142,0.06);}
+.sync-chip.synced .sync-dot{background:var(--teal);box-shadow:0 0 5px rgba(42,170,142,0.5);}
+.sync-chip.err{color:var(--red);border-color:rgba(180,60,80,0.28);background:rgba(180,60,80,0.08);}
+.sync-chip.err .sync-dot{background:var(--red);box-shadow:0 0 5px rgba(217,79,110,0.5);}
+.sync-chip.offline{color:var(--text-dim);}
 </style>
 
 <!-- ══ FIREBASE (Cloud Sync) ══
@@ -629,7 +640,8 @@ body{
 
   <div class="topbar">
     <div class="legend" id="legend"></div>
-    <div style="display:flex;gap:10px;align-items:center;">
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+      <span class="sync-chip offline" id="sync-chip" style="display:none;"><span class="sync-dot"></span><span id="sync-chip-label">Local only</span></span>
       <span class="auth-user-chip" id="auth-user-chip" style="display:none;"></span>
       <button class="edit-btn" onclick="openEditor()" aria-label="Edit schedule">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4Z"/></svg>
@@ -755,6 +767,12 @@ const RAIN_INTENSITY = 3;
    A snapshot listener applies changes made on OTHER devices, but
    ignores our own optimistic writes (via metadata.hasPendingWrites)
    so we never fight with ourselves.
+
+   IMPORTANT: pendingCloudWrites is debounced (700ms) for batching,
+   but any *explicit* user action that should be durable (Save in
+   the editor, Reset, sign-out, tab/window close) calls
+   flushCloudWrites() directly so the write is not lost if the
+   debounce timer never gets to fire.
    ═══════════════════════════════════════════════════════════════ */
 const firebaseConfig = {
   apiKey: "AIzaSyCupbFuZAcgvN1ihtYxecSpfdRi7JjkwK0",
@@ -774,37 +792,72 @@ function firebaseReady(){
   return firebaseConfig.apiKey && firebaseConfig.apiKey!=='YOUR_API_KEY' && typeof firebase!=='undefined';
 }
 
+/* ═══ SYNC STATUS UI ═══ */
+function setSyncStatus(state,label){
+  // state: 'offline' | 'syncing' | 'synced' | 'err'
+  const chip=document.getElementById('sync-chip');
+  const lbl=document.getElementById('sync-chip-label');
+  if(!chip||!lbl) return;
+  chip.style.display='flex';
+  chip.className='sync-chip '+state;
+  lbl.textContent=label||{offline:'Local only',syncing:'Syncing…',synced:'Synced',err:'Sync failed'}[state]||'';
+}
+
 function cloudSyncField(path,value){
   if(!dbRef) return; // not signed in yet / cloud not configured — local save above still happened
   pendingCloudWrites[path]=value;
   clearTimeout(cloudWriteTimer);
+  setSyncStatus('syncing');
   cloudWriteTimer=setTimeout(flushCloudWrites,700);
 }
 
 function flushCloudWrites(){
+  clearTimeout(cloudWriteTimer);
+  cloudWriteTimer=null;
   if(!dbRef) return;
   const writes=pendingCloudWrites;
   pendingCloudWrites={};
   if(Object.keys(writes).length===0) return;
   writes.updatedAt=firebase.firestore.FieldValue.serverTimestamp();
-  dbRef.set(writes,{merge:true}).catch(e=>console.error('Cloud sync failed (change is still saved locally):',e));
+  setSyncStatus('syncing');
+  dbRef.set(writes,{merge:true}).then(()=>{
+    setSyncStatus('synced');
+  }).catch(e=>{
+    console.error('Cloud sync failed (change is still saved locally):',e);
+    setSyncStatus('err');
+    // Put the failed writes back so the next successful flush retries them.
+    Object.assign(pendingCloudWrites,writes);
+    delete pendingCloudWrites.updatedAt;
+  });
 }
+
+// Explicit user actions (Save, Reset) flush immediately instead of waiting on
+// the 700ms debounce, so a closed tab / suspended background tab / navigation
+// right after the click can't silently drop the write.
+window.addEventListener('beforeunload', flushCloudWrites);
+document.addEventListener('visibilitychange', ()=>{ if(document.hidden) flushCloudWrites(); });
 
 function applyCloudData(data){
   if(!data) return;
-  if(data.categories){
-    categories=data.categories.map(normalizeCategory);
-    try{localStorage.setItem(CAT_STORE_KEY,JSON.stringify(categories));}catch(e){}
-  }
   if(data.dayGroups){
     dayGroups=data.dayGroups;
     try{localStorage.setItem(GROUP_CONFIG_KEY,JSON.stringify(dayGroups));}catch(e){}
     DAY_TYPE=buildDayTypeMap(dayGroups);
     todayDayType=DAY_TYPE[now.getDay()]||Object.keys(dayGroups)[0];
   }
+  if(data.categories){
+    categories=data.categories.map(normalizeCategory);
+    try{localStorage.setItem(CAT_STORE_KEY,JSON.stringify(categories));}catch(e){}
+  }
   if(data.schedule){
     D=data.schedule;
-    Object.keys(DEFAULT_D).forEach(k=>{if(!D[k])D[k]=deepClone(DEFAULT_D[k]);if(!Array.isArray(D[k].blocks))D[k].blocks=[];});
+    // Backfill missing groups using the *current* dayGroups (already applied
+    // above), never DEFAULT_D — otherwise deleted/renamed groups from another
+    // device get silently resurrected with default content.
+    Object.keys(dayGroups).forEach(k=>{
+      if(!D[k]) D[k]={focus:'',tip:'',loopholes:[],subj:'',blocks:[]};
+      if(!Array.isArray(D[k].blocks)) D[k].blocks=[];
+    });
     try{localStorage.setItem(SCHEDULE_STORE_KEY,JSON.stringify(D));}catch(e){}
   }
   if(data.completion){
@@ -830,6 +883,7 @@ async function startAppForUser(user){
   }
   const signoutBtn=document.getElementById('signout-btn');
   if(signoutBtn) signoutBtn.style.display='inline-block';
+  setSyncStatus('syncing','Loading…');
 
   try{
     const snap=await dbRef.get();
@@ -848,8 +902,10 @@ async function startAppForUser(user){
     }else{
       applyCloudData(snap.data());
     }
+    setSyncStatus('synced');
   }catch(e){
     console.error('Cloud load failed, continuing with local data for now:',e);
+    setSyncStatus('err','Load failed');
   }
 
   if(unsubscribeSnapshot) unsubscribeSnapshot();
@@ -857,8 +913,12 @@ async function startAppForUser(user){
     if(!doc.exists) return;
     if(doc.metadata.hasPendingWrites) return; // this is our own optimistic write echoing back — already applied
     applyCloudData(doc.data());
+    setSyncStatus('synced');
     if(appStarted){renderLegend();renderTabs();render();renderStreak();}
-  },err=>console.error('Cloud sync listener error:',err));
+  },err=>{
+    console.error('Cloud sync listener error:',err);
+    setSyncStatus('err','Listener error');
+  });
 
   if(!appStarted){appStarted=true;init();}
   else{renderLegend();renderTabs();render();renderStreak();}
@@ -916,6 +976,7 @@ function signIn() {
 }
 
 function signOutUser(){
+  flushCloudWrites(); // don't lose any pending writes on sign-out
   if(unsubscribeSnapshot){unsubscribeSnapshot();unsubscribeSnapshot=null;}
   auth.signOut();
 }
@@ -927,6 +988,7 @@ function initFirebaseAuth(){
     // dashboard still works exactly as before until firebaseConfig is filled in.
     console.warn('Firebase is not configured (see firebaseConfig at top of the script). Running in local-only mode — data will not sync across devices.');
     if(overlay) overlay.style.display='none';
+    setSyncStatus('offline','Local only');
     if(!appStarted){appStarted=true;init();}
     return;
   }
@@ -948,6 +1010,8 @@ function initFirebaseAuth(){
       if(chip) chip.style.display='none';
       const signoutBtn=document.getElementById('signout-btn');
       if(signoutBtn) signoutBtn.style.display='none';
+      const syncChip=document.getElementById('sync-chip');
+      if(syncChip) syncChip.style.display='none';
     }
   });
 }
@@ -1178,8 +1242,12 @@ ensureGroupKeysInD();
 const STORE_KEY='sched_tracker_v4';
 function loadStore(){try{const r=localStorage.getItem(STORE_KEY);return r?JSON.parse(r):{}}catch(e){return{}}}
 function saveStore(s){try{localStorage.setItem(STORE_KEY,JSON.stringify(s))}catch(e){}}
-/* Completion data is synced per-day (see toggle()/confirmReset()) so that two devices
-   editing different days never clobber each other's data. */
+/* Completion data is synced as a single 'completion' field (the whole map,
+   keyed by date) rather than dotted per-day paths — Firestore's set(...,
+   {merge:true}) does NOT treat dotted keys in a plain object as nested
+   paths (that's only true for update()), so a per-day dotted key would
+   silently create a bogus top-level field like "completion.2026-07-17"
+   instead of nesting under completion. */
 let store=loadStore();
 
 function todayKey(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
@@ -1381,7 +1449,11 @@ function toggle(idx){
   const status=getStatus(idx,block);
   if(status==='open'){if(!store[todayK]) store[todayK]={};store[todayK][idx]=true;}
   else if(status==='done'){const endMin=toMinutes(block.e),startMin=toMinutes(block.s);if(nowMin>=startMin&&nowMin<=endMin){if(store[todayK]) delete store[todayK][idx];}}
-  saveStore(store);cloudSyncField('completion.'+todayK,store[todayK]||{});render();renderStreakCounter();}
+  saveStore(store);
+  // Sync the whole completion map (not a dotted per-day path — see note above
+  // loadStore()) so Firestore's set({...},{merge:true}) actually nests it.
+  cloudSyncField('completion',store);
+  render();renderStreakCounter();}
 
 function render(){
   const s=D[active];
@@ -1560,6 +1632,7 @@ function confirmReset(yes){
   DAY_TYPE=buildDayTypeMap(dayGroups);
   todayDayType=DAY_TYPE[now.getDay()]||getKeys()[0];
   if(!D[active]) active=todayDayType;
+  flushCloudWrites(); // explicit user action — don't wait on the debounce timer
   renderLegend();renderTabs();render();renderStreak();
 }
 function sw(k){active=k;renderTabs();render();}
@@ -1929,6 +2002,10 @@ function saveEditor(){
   });
   saveSchedule();
   if(!D[active]||!dayGroups[active]) active=todayDayType;
+  // This is an explicit, deliberate user action — flush to Firestore right
+  // now instead of relying on the 700ms debounce, so closing the modal /
+  // tab / laptop immediately after Save can never silently drop the write.
+  flushCloudWrites();
   renderLegend();renderTabs();render();renderStreak();
   closeModal();
 }
@@ -1962,6 +2039,7 @@ function editorResetConfirm(){
   todayDayType=DAY_TYPE[now.getDay()]||getKeys()[0];
   if(!D[active]) active=todayDayType;
   saveSchedule();
+  flushCloudWrites(); // explicit user action — flush immediately
   editorActiveTab=active;
   dgmRenderGroups();renderCatManager();renderEditorTabs();renderEditorBody();
   renderLegend();renderTabs();render();renderStreak();
