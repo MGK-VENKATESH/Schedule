@@ -573,6 +573,33 @@ body{
 .sync-chip.err{color:var(--red);border-color:rgba(180,60,80,0.28);background:rgba(180,60,80,0.08);}
 .sync-chip.err .sync-dot{background:var(--red);box-shadow:0 0 5px rgba(217,79,110,0.5);}
 .sync-chip.offline{color:var(--text-dim);}
+
+/* ══ EDITOR REDESIGN (sectioned, list + edit-panel pattern) ══ */
+.ed-section-intro{font-size:11.5px;color:var(--text-dim);line-height:1.6;margin-bottom:14px;padding:12px 14px;border-radius:12px;background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.06);}
+.ed-section-intro b{color:var(--text);}
+.ed-list{display:flex;flex-direction:column;gap:8px;margin-bottom:14px;}
+.ed-list-empty{text-align:center;padding:24px 16px;color:var(--text-dim);font-size:12.5px;font-style:italic;border-radius:12px;background:rgba(255,255,255,0.02);border:1px dashed rgba(255,255,255,0.08);}
+.ed-list-row{display:flex;align-items:center;gap:12px;padding:13px 14px;border-radius:14px;background:rgba(6,18,48,0.55);border:1px solid rgba(255,255,255,0.08);transition:all .2s;}
+.ed-list-row:hover{background:rgba(10,26,64,0.62);border-color:rgba(255,255,255,0.14);}
+.ed-list-main{flex:1;min-width:0;}
+.ed-list-title{font-size:14px;font-weight:600;color:var(--text);letter-spacing:0.2px;}
+.ed-list-sub{font-size:11px;color:var(--text-dim);margin-top:2px;}
+.ed-list-actions{display:flex;gap:6px;flex-shrink:0;}
+.ed-mini-btn{font-family:'Orbitron',sans-serif;font-size:9.5px;letter-spacing:1px;text-transform:uppercase;padding:7px 12px;border-radius:8px;border:1px solid rgba(56,150,212,0.25);background:rgba(56,150,212,0.06);color:#8ec8e8;cursor:pointer;transition:all .2s;}
+.ed-mini-btn:hover{border-color:var(--cyan);background:rgba(56,150,212,0.12);}
+.ed-mini-btn.danger{border-color:rgba(180,60,80,0.25);background:rgba(180,60,80,0.05);color:var(--red);}
+.ed-mini-btn.danger:hover{border-color:var(--red);background:rgba(180,60,80,0.12);}
+.ed-back-btn{display:inline-flex;align-items:center;gap:6px;font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;padding:9px 14px;border-radius:10px;border:1px solid rgba(255,255,255,0.10);background:rgba(255,255,255,0.03);color:var(--text-dim);cursor:pointer;transition:all .2s;margin-bottom:14px;}
+.ed-back-btn:hover{color:var(--text);border-color:rgba(255,255,255,0.22);}
+.ed-edit-panel{padding:16px;border-radius:16px;background:rgba(6,18,48,0.55);border:1px solid rgba(255,255,255,0.08);display:flex;flex-direction:column;gap:14px;}
+.ed-edit-panel-title{font-family:'Orbitron',sans-serif;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text);}
+.ed-move-row{display:flex;gap:8px;}
+.ed-task-list{display:flex;flex-direction:column;gap:8px;margin-bottom:14px;}
+.ed-task-card{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;--accent:rgba(255,255,255,0.08);background:rgba(6,18,48,0.55);border:1px solid rgba(255,255,255,0.08);border-left:3px solid var(--accent);transition:all .2s;}
+.ed-task-card:hover{background:rgba(10,26,64,0.62);}
+.ed-task-time{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-dim);min-width:78px;flex-shrink:0;line-height:1.5;}
+.ed-task-main{flex:1;min-width:0;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.ed-task-title{font-size:13.5px;font-weight:600;color:var(--text);}
 </style>
 
 <!-- ══ FIREBASE (Cloud Sync) ══
@@ -1278,7 +1305,13 @@ let now=new Date();
 let todayK=todayKey(now);
 let todayDayType=DAY_TYPE[now.getDay()]||Object.keys(dayGroups)[0];
 let nowMin=now.getHours()*60+now.getMinutes();
-function getKeys(){return Object.keys(dayGroups);}
+function getKeys(){
+  return Object.keys(dayGroups).sort((a,b)=>{
+    const da=(dayGroups[a]&&dayGroups[a].length)?Math.min(...dayGroups[a]):99;
+    const db=(dayGroups[b]&&dayGroups[b].length)?Math.min(...dayGroups[b]):99;
+    return da-db;
+  });
+}
 let active=todayDayType;
 
 /* ═══ MODAL ═══ */
@@ -1324,7 +1357,7 @@ function openCatInfoPage(catVal){
     </div>
     ${notes.trim()
       ? `<div class="cat-info-notes">${escapeHtml(notes)}</div>`
-      : `<div class="cat-info-empty">No notes added for this category yet.<br><span style="font-size:11px;opacity:0.6">Open the editor → Category Manager to add notes.</span></div>`}
+      : `<div class="cat-info-empty">No notes added for this category yet.<br><span style="font-size:11px;opacity:0.6">Open the editor → Categories to add notes.</span></div>`}
   `;
   openModal(cat.label, html, cat.color);
 }
@@ -1638,15 +1671,26 @@ function confirmReset(yes){
 function sw(k){active=k;renderTabs();render();}
 
 /* ══════════════════════════════════════════
-   SCHEDULE EDITOR
+   SCHEDULE EDITOR (redesigned: sectioned tabs
+   + list/edit-panel pattern instead of one long
+   scrolling page)
    ══════════════════════════════════════════ */
-let editorActiveTab=null;
+let editorActiveTab=null;         // which schedule bucket (real dayGroups key) Tasks section is editing
+let editorSection='groups';       // 'groups' | 'categories' | 'tasks' | 'settings'
+let editorGroupEditing=null;      // draft group key currently open in the day-selector panel, or null
+let editorCategoryEditingIdx=null;// index into editorCategories currently open, or null
+let editorTaskEditingIdx=null;    // index into D[editorActiveTab].blocks currently open, or null
 
-/* ══ DAY GROUP MANAGER ══ */
 const ALL_DAYS=[
   {idx:0,label:'Sun'},{idx:1,label:'Mon'},{idx:2,label:'Tue'},
   {idx:3,label:'Wed'},{idx:4,label:'Thu'},{idx:5,label:'Fri'},{idx:6,label:'Sat'}
 ];
+
+/* ── Draft group state (dgmGroups) is a working copy of dayGroups edited
+   during this editor session. Nothing touches the real `dayGroups` / `D`
+   objects until Save Changes is pressed (dgmCommit). dgmOriginalKeys maps
+   each draft key back to the D key it originally came from, so schedule
+   content (tasks) follows a group through a rename instead of being lost. */
 let dgmGroups={};
 let dgmOriginalKeys={};
 
@@ -1654,51 +1698,22 @@ function dgmBuildLabel(dayIndices){
   const sorted=dayIndices.slice().sort((a,b)=>a-b);
   return sorted.map(i=>ALL_DAYS.find(d=>d.idx===i).label).join(' / ');
 }
-
 function dgmStartEdit(){
   dgmGroups=deepCloneGroups(dayGroups);
   dgmOriginalKeys={};
   Object.keys(dgmGroups).forEach(k=>{dgmOriginalKeys[k]=k;});
 }
-
 function dgmGetAssignedDay(dayIdx){
   for(const name of Object.keys(dgmGroups)){
     if(dgmGroups[name].includes(dayIdx)) return name;
   }
   return null;
 }
-
-function dgmRenderGroups(){
-  dgmStartEdit();
-  const container=document.getElementById('dgm-groups');
-  if(!container) return;
-  _dgmPaintGroups(container);
-}
-
-function _dgmPaintGroups(container){
-  const groups=dgmGroups;
-  container.innerHTML=Object.keys(groups).map((name,gi)=>{
-    const daysHTML=ALL_DAYS.map(day=>{
-      const assigned=groups[name].includes(day.idx);
-      const ownerName=dgmGetAssignedDay(day.idx);
-      const conflictGroup=ownerName&&ownerName!==name?ownerName:'';
-      return `<div class="dgm-day-chip${assigned?' assigned':''}" title="${conflictGroup?'Currently in: '+conflictGroup:''}" onclick="dgmToggleDay('${name}',${day.idx})">
-        <span class="dgm-chip-check"></span>
-        <span>${day.label}</span>
-      </div>`;
-    }).join('');
-    return `<div class="dgm-group" data-group="${gi}">
-      <div class="dgm-group-header">
-        <span class="dgm-group-name-display" style="flex:1;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:600;color:var(--text);padding:5px 2px;">${escapeHtml(name)}</span>
-        <button class="dgm-delete-group-btn" onclick="dgmDeleteGroup('${escapeAttr(name)}')" title="Delete group">&#x2715;</button>
-      </div>
-      <div class="dgm-days-grid">${daysHTML}</div>
-    </div>`;
-  }).join('');
-  dgmValidate();
-}
-
 function dgmToggleDay(groupName, dayIdx){
+  // Prevent duplicate assignment entirely: if this day already belongs to
+  // another draft group, silently move it out of that group first — a day
+  // can never end up in two groups at once, so there is no invalid state
+  // to catch after the fact.
   const currentOwner=dgmGetAssignedDay(dayIdx);
   if(currentOwner&&currentOwner!==groupName){
     dgmGroups[currentOwner]=dgmGroups[currentOwner].filter(d=>d!==dayIdx);
@@ -1709,288 +1724,317 @@ function dgmToggleDay(groupName, dayIdx){
     dgmGroups[groupName].push(dayIdx);
   }
   dgmGroups[groupName].sort((a,b)=>a-b);
-  const container=document.getElementById('dgm-groups');
-  if(container) _dgmPaintGroups(container);
+}
+function sortedDraftGroupKeys(){
+  return Object.keys(dgmGroups).sort((a,b)=>{
+    const da=dgmGroups[a].length?Math.min(...dgmGroups[a]):99;
+    const db=dgmGroups[b].length?Math.min(...dgmGroups[b]):99;
+    return da-db;
+  });
+}
+function dgmComputeValidation(){
+  const assigned=[];
+  Object.values(dgmGroups).forEach(days=>days.forEach(d=>assigned.push(d)));
+  const unassigned=ALL_DAYS.filter(d=>!assigned.includes(d.idx)).map(d=>d.label);
+  const duplicates=ALL_DAYS.filter(d=>assigned.filter(a=>a===d.idx).length>1).map(d=>d.label);
+  if(duplicates.length) return{ok:false,msg:'Duplicate assignment: '+duplicates.join(', ')+' — a day can only belong to one group.'};
+  if(unassigned.length) return{ok:false,msg:'Unassigned days: '+unassigned.join(', ')+' — every day must belong to a group.'};
+  return{ok:true,msg:'All 7 days assigned correctly.'};
+}
+function dgmValidate(){
+  const el=document.getElementById('dgm-validation');
+  const r=dgmComputeValidation();
+  if(el){el.className='dgm-validation-msg '+(r.ok?'ok':'error');el.textContent=(r.ok?'✔ ':'❌ ')+r.msg;}
+  return r.ok;
 }
 
-function dgmDeleteGroup(name){
-  if(Object.keys(dgmGroups).length<=1){dgmValidate('Must have at least one group.');return;}
-  delete dgmGroups[name];
-  delete dgmOriginalKeys[name];
-  const container=document.getElementById('dgm-groups');
-  if(container) _dgmPaintGroups(container);
-  if(editorActiveTab===name){editorActiveTab=Object.keys(dgmGroups)[0];renderEditorTabs();renderEditorBody();}
-}
-
-function dgmAddGroup(){
-  const newKey='__new__'+Date.now();
-  dgmGroups[newKey]=[];
-  dgmOriginalKeys[newKey]=null;
-  const container=document.getElementById('dgm-groups');
-  if(container) _dgmPaintGroups(container);
-}
-
+/* Rebuilds dayGroups + D from the draft state. Always constructs a brand
+   new D object from scratch and replaces the old one wholesale (rather than
+   selectively deleting stale keys) so a renamed/merged/split group can never
+   leave a stale duplicate entry behind — this was the root cause of the
+   "leftover group" bug. */
 function dgmCommit(){
   const usedLabels={};
   const newGroups={};
   const newD={};
-
-  Object.keys(dgmGroups).forEach(currentKey=>{
+  sortedDraftGroupKeys().forEach(currentKey=>{
     const days=dgmGroups[currentKey].slice().sort((a,b)=>a-b);
     let label=days.length>0?dgmBuildLabel(days):'(empty)';
     if(usedLabels[label]!==undefined){usedLabels[label]++;label=label+' ('+usedLabels[label]+')';}
     else{usedLabels[label]=0;}
     newGroups[label]=days;
-    const origKey=dgmOriginalKeys[currentKey]||currentKey;
-    const schedData=D[origKey]||D[currentKey]||D[label];
-    if(schedData){newD[label]=schedData;}
-    else{newD[label]={focus:'New schedule group',tip:'',loopholes:[],subj:'',blocks:[]};}
+    const origKey=dgmOriginalKeys[currentKey];
+    const schedData=(origKey&&D[origKey])?D[origKey]:(D[currentKey]||{focus:'',tip:'',loopholes:[],subj:'',blocks:[]});
+    newD[label]=schedData;
   });
-
-  Object.keys(newGroups).forEach(k=>{
-    if(!newD[k]) newD[k]={focus:'',tip:'',loopholes:[],subj:'',blocks:[]};
-    if(!Array.isArray(newD[k].blocks)) newD[k].blocks=[];
-  });
-
-  Object.keys(D).forEach(k=>{if(!newGroups[k]) delete D[k];});
-  Object.assign(D, newD);
+  Object.keys(newD).forEach(k=>{if(!Array.isArray(newD[k].blocks)) newD[k].blocks=[];});
+  // Wholesale replace — never partially mutate D, so no stale keys can survive.
+  Object.keys(D).forEach(k=>delete D[k]);
+  Object.assign(D,newD);
   return newGroups;
 }
 
-function dgmValidate(msg){
-  const el=document.getElementById('dgm-validation');
-  if(!el) return true;
-  if(msg){el.className='dgm-validation-msg error';el.textContent=msg;return false;}
-  const assigned=[];
-  Object.values(dgmGroups).forEach(days=>days.forEach(d=>assigned.push(d)));
-  const unassigned=ALL_DAYS.filter(d=>!assigned.includes(d.idx)).map(d=>d.label);
-  const duplicates=ALL_DAYS.filter(d=>assigned.filter(a=>a===d.idx).length>1).map(d=>d.label);
-  if(duplicates.length){el.className='dgm-validation-msg error';el.textContent='❌ Duplicate assignment: '+duplicates.join(', ')+'— a day can only belong to one group.';return false;}
-  if(unassigned.length){el.className='dgm-validation-msg error';el.textContent='❌ Unassigned days: '+unassigned.join(', ')+'— every day must belong to a group.';return false;}
-  el.className='dgm-validation-msg ok';el.textContent='✔ All 7 days assigned correctly.';return true;
-}
-
-/* ══ CATEGORY MANAGER IN EDITOR ══ */
+/* ── Category draft state ── */
 let editorCategories=[];
-
 function catMgrStart(){
   editorCategories=JSON.parse(JSON.stringify(categories));
 }
-
-function renderCatManager(){
-  const c=document.getElementById('cat-mgr-list');
-  if(!c) return;
-  c.innerHTML=editorCategories.map((cat,i)=>{
-    return `<div class="cat-mgr-row" data-ci="${i}">
-      <div class="cat-mgr-swatch" style="background:${cat.color}" title="Pick color">
-        <input type="color" value="${cat.color}" onchange="catMgrSetColor(${i},this.value)" title="Pick color">
-      </div>
-      <input class="cat-mgr-name" type="text" value="${escapeAttr(cat.label)}" oninput="catMgrSetName(${i},this.value)" placeholder="Category name">
-      <button class="cat-mgr-notes-btn" onclick="catMgrOpenNotes(${i})">Notes</button>
-      <button class="cat-mgr-del-btn" onclick="catMgrDelete(${i})" title="Delete category">&#x2715;</button>
-    </div>`;
-  }).join('');
-}
-
-function catMgrSetColor(i,v){
-  editorCategories[i].color=v;
-  const row=document.querySelectorAll('#cat-mgr-list .cat-mgr-row')[i];
-  if(row){const sw=row.querySelector('.cat-mgr-swatch');if(sw)sw.style.background=v;}
-}
-
-function catMgrSetName(i,v){
-  editorCategories[i].label=v.trim()||editorCategories[i].label;
-}
-
-function catMgrSyncInputs(){
-  document.querySelectorAll('#cat-mgr-list .cat-mgr-row').forEach(row=>{
-    const i=Number(row.dataset.ci);
-    const name=row.querySelector('.cat-mgr-name');
-    if(editorCategories[i]&&name) catMgrSetName(i,name.value);
-  });
-}
-
-function catMgrOpenNotes(i){
-  const cat=editorCategories[i];
-  const backdrop=document.getElementById('modal-backdrop');
-  const panel=document.createElement('div');
-  panel.id='cat-notes-panel';
-  panel.style.cssText='position:absolute;inset:0;z-index:10;background:rgba(2,8,26,0.94);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);display:flex;flex-direction:column;padding:20px 24px;overflow-y:auto;';
-  panel.innerHTML=`
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
-      <button onclick="catMgrCloseNotes()" style="width:28px;height:28px;border-radius:7px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.05);color:var(--text-dim);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;">&#8592;</button>
-      <span style="font-family:'Orbitron',sans-serif;font-size:12px;letter-spacing:2px;text-transform:uppercase;color:${cat.color}">${escapeHtml(cat.label)} — Notes</span>
-    </div>
-    <div style="font-size:11.5px;color:var(--text-dim);margin-bottom:10px;line-height:1.6;">Write anything here — syllabus, resources, roadmap, links, or goals. This appears when you click the category card.</div>
-    <textarea class="cat-notes-area" id="cat-notes-textarea" placeholder="e.g. Tier 1 syllabus, study resources, weekly targets...">${escapeHtml(cat.notes||'')}</textarea>
-    <button onclick="catMgrSaveNotes(${i})" style="font-family:'Orbitron',sans-serif;font-size:10.5px;letter-spacing:1.5px;text-transform:uppercase;padding:11px;border-radius:10px;border:1px solid rgba(42,170,142,0.35);background:rgba(42,170,142,0.10);color:var(--teal);cursor:pointer;margin-top:12px;transition:all .2s;">Save Notes</button>
-  `;
-  if(backdrop) backdrop.appendChild(panel);
-}
-
-function catMgrCloseNotes(){
-  const p=document.getElementById('cat-notes-panel');
-  if(p) p.remove();
-}
-
-function catMgrSaveNotes(i){
-  const ta=document.getElementById('cat-notes-textarea');
-  if(ta) editorCategories[i].notes=ta.value;
-  catMgrCloseNotes();
-}
+function catMgrSetColor(i,v){ if(editorCategories[i]) editorCategories[i].color=v; }
+function catMgrSetName(i,v){ if(editorCategories[i]) editorCategories[i].label=v.trim()||editorCategories[i].label; }
 
 function catMgrDelete(i){
   const cat=editorCategories[i];
   if(!cat) return;
   let inUse=false;
   Object.values(D).forEach(sched=>{
-    if(Array.isArray(sched.blocks)){
-      sched.blocks.forEach(b=>{if(b.c===cat.v) inUse=true;});
-    }
+    if(Array.isArray(sched.blocks)) sched.blocks.forEach(b=>{if(b.c===cat.v) inUse=true;});
   });
-  if(inUse){
-    const backdrop=document.getElementById('modal-backdrop');
-    const panel=document.createElement('div');
-    panel.id='cat-del-warn';
-    panel.style.cssText='position:absolute;inset:0;z-index:10;background:rgba(2,8,26,0.90);backdrop-filter:blur(18px);display:flex;align-items:center;justify-content:center;';
-    panel.innerHTML=`<div style="background:rgba(4,12,34,0.98);border:1px solid rgba(180,60,80,0.32);border-radius:16px;padding:24px;max-width:280px;width:90%;text-align:center;">
-      <div style="font-family:'Orbitron',sans-serif;font-size:12px;color:var(--red);letter-spacing:2px;margin-bottom:10px;">&#x26a0; CANNOT DELETE</div>
-      <div style="font-size:13px;color:var(--text-dim);line-height:1.6;margin-bottom:18px;">Category is currently used by tasks. Reassign or remove those tasks before deleting.</div>
-      <button onclick="document.getElementById('cat-del-warn').remove()" style="font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:1.5px;padding:10px 20px;border-radius:10px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.04);color:#6a8aaa;cursor:pointer;">OK</button>
-    </div>`;
-    if(backdrop) backdrop.appendChild(panel);
-    return;
-  }
+  if(inUse){ alert('"'+cat.label+'" is used by one or more tasks. Reassign or delete those tasks first.'); return; }
   if(!confirm('Delete category "'+cat.label+'"?')) return;
   editorCategories.splice(i,1);
-  renderCatManager();
+  if(editorCategoryEditingIdx===i) editorCategoryEditingIdx=null;
+  renderEditorSection();
 }
-
-function catMgrAddCategory(){
-  const newV='cat_'+Date.now();
-  editorCategories.push({v:newV,label:'NEW CATEGORY',color:'#4a7acf',notes:''});
-  renderCatManager();
-  setTimeout(()=>{
-    const c=document.getElementById('cat-mgr-list');
-    if(c) c.lastElementChild&&c.lastElementChild.scrollIntoView({behavior:'smooth',block:'nearest'});
-  },50);
+function editorAddCategory(){
+  editorCategories.push({v:'cat_'+Date.now(),label:'NEW CATEGORY',color:'#4a7acf',notes:''});
+  editorCategoryEditingIdx=editorCategories.length-1;
+  renderEditorSection();
 }
 
 /* ═══ EDITOR OPEN ═══ */
 function openEditor(){
   editorActiveTab=active;
+  editorSection='groups';
+  editorGroupEditing=null;
+  editorCategoryEditingIdx=null;
+  editorTaskEditingIdx=null;
   catMgrStart();
+  dgmStartEdit();
   const editorHTML=`
-    <div class="editor-section-divider">&#x229e; Day Group Manager</div>
-    <div class="dgm-section">
-      <div class="dgm-header">
-        <span class="dgm-title">Assign days to schedule groups</span>
-        <button class="dgm-add-group-btn" onclick="dgmAddGroup()">+ New Group</button>
-      </div>
-      <div id="dgm-groups"></div>
-      <div class="dgm-validation-msg" id="dgm-validation"></div>
-    </div>
-    <div class="editor-section-divider">&#x229e; Category Manager</div>
-    <div class="dgm-section">
-      <div class="dgm-header">
-        <span class="dgm-title">Manage categories &amp; info pages</span>
-      </div>
-      <div class="cat-mgr-list" id="cat-mgr-list"></div>
-      <button class="cat-mgr-add-btn" onclick="catMgrAddCategory()">+ Add Category</button>
-    </div>
-    <div class="editor-section-divider">&#x229e; Schedule Tasks</div>
-    <div id="editor-tabs" class="tabs" style="margin-bottom:14px;"></div>
-    <div class="ed-tab-note">Edit times, titles, descriptions and categories below. Changes apply immediately to status logic, locking, and streak calculations once saved.</div>
-    <div id="editor-list" class="editor-list"></div>
-    <button class="ed-add-btn" onclick="addTask()">+ Add Task</button>
+    <div class="tabs" id="ed-section-tabs"></div>
+    <div id="ed-section-body"></div>
     <div class="ed-actions-bar">
       <button class="ed-save-btn" onclick="saveEditor()">Save Changes</button>
-      <button class="ed-reset-sched-btn" onclick="resetSchedule()">Reset to Default</button>
     </div>`;
   openModal('SCHEDULE EDITOR', editorHTML, 'var(--cyan)');
-  // Use rAF to ensure modal DOM is ready before populating
   requestAnimationFrame(()=>{
-    dgmRenderGroups();
-    renderCatManager();
-    renderEditorTabs();
-    renderEditorBody();
+    renderEditorSectionTabs();
+    renderEditorSection();
   });
 }
 
-function renderEditorTabs(){
-  const c=document.getElementById('editor-tabs');
+function renderEditorSectionTabs(){
+  const c=document.getElementById('ed-section-tabs');
   if(!c) return;
-  const keys=getKeys();
-  c.innerHTML=keys.map(k=>`<button class="tab${k===editorActiveTab?' on':''}" onclick="switchEditorTab('${k}')">${k}</button>`).join('');
+  const sections=[['groups','Groups'],['categories','Categories'],['tasks','Tasks'],['settings','Settings']];
+  c.innerHTML=sections.map(([id,label])=>`<button class="tab${editorSection===id?' on':''}" onclick="switchEditorSection('${id}')">${label}</button>`).join('');
 }
-function switchEditorTab(k){editorActiveTab=k;renderEditorTabs();renderEditorBody();}
-
-function renderEditorBody(){
-  const c=document.getElementById('editor-list');
+function switchEditorSection(id){
+  editorSection=id;
+  editorGroupEditing=null;editorCategoryEditingIdx=null;editorTaskEditingIdx=null;
+  renderEditorSectionTabs();
+  renderEditorSection();
+}
+function renderEditorSection(){
+  const c=document.getElementById('ed-section-body');
   if(!c) return;
-  if(!D[editorActiveTab]){c.innerHTML='';return;}
-  const blocks=D[editorActiveTab].blocks||[];
-  c.innerHTML=blocks.map((b,i)=>{
-    const catColor2=editorCategories.find(ec=>ec.v===b.c)?.color||'#4a6a8a';
-    const opts=editorCategories.map(o=>`<option value="${o.v}"${o.v===b.c?' selected':''}>${o.label}</option>`).join('');
-    return `
-    <div class="editor-row" data-idx="${i}">
-      <div class="editor-row-top">
-        <span class="ed-cat-dot" style="background:${catColor2}"></span>
-        <div class="editor-row-fields" style="flex:1;grid-template-columns:1fr 1fr;">
-          <div class="ed-field"><label>Start Time</label><input type="time" value="${b.s}" onchange="updateField('${editorActiveTab}',${i},'s',this.value)"></div>
-          <div class="ed-field"><label>End Time</label><input type="time" value="${b.e}" onchange="updateField('${editorActiveTab}',${i},'e',this.value)"></div>
+  if(editorSection==='groups'){ c.innerHTML=renderGroupsSection(); dgmValidate(); }
+  else if(editorSection==='categories'){ c.innerHTML=renderCategoriesSection(); }
+  else if(editorSection==='tasks'){ c.innerHTML=renderTasksSection(); }
+  else{ c.innerHTML=renderSettingsSection(); }
+}
+
+/* ── GROUPS SECTION ── */
+function renderGroupsSection(){
+  if(editorGroupEditing!==null && dgmGroups[editorGroupEditing]!==undefined){
+    return renderGroupEditPanel(editorGroupEditing);
+  }
+  editorGroupEditing=null;
+  const keys=sortedDraftGroupKeys();
+  const rows=keys.map(k=>{
+    const days=dgmGroups[k];
+    const label=days.length?dgmBuildLabel(days):'(no days assigned)';
+    return `<div class="ed-list-row">
+      <div class="ed-list-main">
+        <div class="ed-list-title">${escapeHtml(label)}</div>
+        <div class="ed-list-sub">${days.length} day${days.length===1?'':'s'}</div>
+      </div>
+      <div class="ed-list-actions">
+        <button class="ed-mini-btn" onclick="editorEditGroup('${escapeAttr(k)}')">Edit</button>
+        <button class="ed-mini-btn danger" onclick="editorDeleteGroup('${escapeAttr(k)}')">Delete</button>
+      </div>
+    </div>`;
+  }).join('');
+  return `<div class="ed-section-intro">Assign each weekday to a schedule group. Every day must belong to exactly <b>one</b> group — assigning a day to a new group automatically removes it from its previous one.</div>
+    <div class="ed-list">${rows||'<div class="ed-list-empty">No groups yet.</div>'}</div>
+    <div class="dgm-validation-msg" id="dgm-validation"></div>
+    <button class="ed-add-btn" onclick="editorAddGroup()">+ Add Group</button>`;
+}
+function editorEditGroup(key){ editorGroupEditing=key; renderEditorSection(); }
+function editorAddGroup(){
+  const newKey='__new__'+Date.now();
+  dgmGroups[newKey]=[];
+  editorGroupEditing=newKey;
+  renderEditorSection();
+}
+function editorDeleteGroup(key){
+  if(Object.keys(dgmGroups).length<=1){ alert('Must have at least one group.'); return; }
+  if(!confirm('Delete this group? Its days will need to be reassigned to another group.')) return;
+  delete dgmGroups[key];
+  delete dgmOriginalKeys[key];
+  renderEditorSection();
+}
+function editorCloseGroupPanel(){ editorGroupEditing=null; renderEditorSection(); }
+function editorToggleGroupDay(key,dayIdx){
+  dgmToggleDay(key,dayIdx);
+  renderEditorSection();
+}
+function renderGroupEditPanel(key){
+  const days=dgmGroups[key]||[];
+  const label=days.length?dgmBuildLabel(days):'New Group';
+  const chips=ALL_DAYS.map(day=>{
+    const assigned=days.includes(day.idx);
+    return `<label class="dgm-day-chip${assigned?' assigned':''}">
+      <input type="checkbox" ${assigned?'checked':''} onchange="editorToggleGroupDay('${escapeAttr(key)}',${day.idx})">
+      <span class="dgm-chip-check"></span><span>${day.label}</span>
+    </label>`;
+  }).join('');
+  return `<button class="ed-back-btn" onclick="editorCloseGroupPanel()">&#8592; Back to Groups</button>
+    <div class="ed-edit-panel">
+      <div class="ed-edit-panel-title">${escapeHtml(label)}</div>
+      <div class="ed-field"><label>Days</label><div class="dgm-days-grid">${chips}</div></div>
+      <div class="dgm-validation-msg" id="dgm-validation"></div>
+    </div>`;
+}
+
+/* ── CATEGORIES SECTION ── */
+function renderCategoriesSection(){
+  if(editorCategoryEditingIdx!==null && editorCategories[editorCategoryEditingIdx]!==undefined){
+    return renderCategoryEditPanel(editorCategoryEditingIdx);
+  }
+  editorCategoryEditingIdx=null;
+  const rows=editorCategories.map((cat,i)=>`<div class="ed-list-row">
+      <span class="cat-mgr-swatch" style="background:${cat.color}"></span>
+      <div class="ed-list-main">
+        <div class="ed-list-title">${escapeHtml(cat.label)}</div>
+        <div class="ed-list-sub">${cat.notes&&cat.notes.trim()?'Has notes':'No notes'}</div>
+      </div>
+      <div class="ed-list-actions">
+        <button class="ed-mini-btn" onclick="editorEditCategory(${i})">Edit</button>
+        <button class="ed-mini-btn danger" onclick="catMgrDelete(${i})">Delete</button>
+      </div>
+    </div>`).join('');
+  return `<div class="ed-section-intro">Categories control color-coding, the dashboard legend, and the info page shown when you tap a stat card.</div>
+    <div class="ed-list">${rows||'<div class="ed-list-empty">No categories yet.</div>'}</div>
+    <button class="ed-add-btn" onclick="editorAddCategory()">+ Add Category</button>`;
+}
+function editorEditCategory(i){ editorCategoryEditingIdx=i; renderEditorSection(); }
+function editorCloseCategoryPanel(){ editorCategoryEditingIdx=null; renderEditorSection(); }
+function renderCategoryEditPanel(i){
+  const cat=editorCategories[i];
+  return `<button class="ed-back-btn" onclick="editorCloseCategoryPanel()">&#8592; Back to Categories</button>
+    <div class="ed-edit-panel">
+      <div class="ed-field"><label>Color</label>
+        <div class="cat-mgr-swatch" style="background:${cat.color};width:32px;height:32px;border-radius:8px;">
+          <input type="color" value="${cat.color}" onchange="catMgrSetColor(${i},this.value);renderEditorSection()">
         </div>
-        <button class="ed-icon-btn" onclick="moveTask(${i},-1)" title="Move up" aria-label="Move up">&#8593;</button>
-        <button class="ed-icon-btn" onclick="moveTask(${i},1)" title="Move down" aria-label="Move down">&#8595;</button>
-        <button class="ed-icon-btn danger" onclick="deleteTask(${i})" title="Delete" aria-label="Delete">&#x2715;</button>
       </div>
-      <div class="editor-row-fields full">
-        <div class="ed-field"><label>Task Title</label><input type="text" value="${escapeAttr(b.ti)}" onchange="updateField('${editorActiveTab}',${i},'ti',this.value)"></div>
-      </div>
-      <div class="editor-row-fields full">
-        <div class="ed-field"><label>Description</label><textarea onchange="updateField('${editorActiveTab}',${i},'d',this.value)">${escapeHtml(b.d)}</textarea></div>
-      </div>
-      <div class="editor-row-fields full">
-        <div class="ed-field"><label>Category</label><select onchange="updateField('${editorActiveTab}',${i},'c',this.value);updateEditorRowDot(${i},this.value)">${opts}</select></div>
-      </div>
-    </div>
-  `}).join('');
+      <div class="ed-field"><label>Name</label><input type="text" value="${escapeAttr(cat.label)}" oninput="catMgrSetName(${i},this.value)"></div>
+      <div class="ed-field"><label>Notes</label><textarea class="cat-notes-area" placeholder="e.g. Tier 1 syllabus, study resources, weekly targets..." oninput="editorCategories[${i}].notes=this.value">${escapeHtml(cat.notes||'')}</textarea></div>
+    </div>`;
 }
 
-function updateEditorRowDot(idx,catVal){
-  const col=editorCategories.find(ec=>ec.v===catVal)?.color||'#4a6a8a';
-  const row=document.querySelector(`#editor-list .editor-row[data-idx="${idx}"] .ed-cat-dot`);
-  if(row) row.style.background=col;
+/* ── TASKS SECTION ── */
+function renderTasksSection(){
+  const keys=getKeys();
+  if(!keys.includes(editorActiveTab)) editorActiveTab=keys[0];
+  const tabsHTML=keys.map(k=>`<button class="tab${k===editorActiveTab?' on':''}" onclick="switchEditorTaskTab('${escapeAttr(k)}')">${escapeHtml(k)}</button>`).join('');
+  if(editorTaskEditingIdx!==null && D[editorActiveTab] && D[editorActiveTab].blocks[editorTaskEditingIdx]!==undefined){
+    return `<div class="tabs" style="margin-bottom:14px;">${tabsHTML}</div>`+renderTaskEditPanel(editorTaskEditingIdx);
+  }
+  editorTaskEditingIdx=null;
+  const blocks=(D[editorActiveTab]&&D[editorActiveTab].blocks)||[];
+  const cards=blocks.map((b,i)=>{
+    const cat=editorCategories.find(ec=>ec.v===b.c)||getCatByVal(b.c);
+    return `<div class="ed-task-card" style="--accent:${cat.color}">
+      <div class="ed-task-time">${fmtTime(b.s)}<br>${fmtTime(b.e)}</div>
+      <div class="ed-task-main">
+        <div class="ed-task-title">${escapeHtml(b.ti)}</div>
+        <span class="bdg" style="border-color:${cat.color};color:${cat.color}">${escapeHtml(cat.label)}</span>
+      </div>
+      <div class="ed-list-actions">
+        <button class="ed-mini-btn" onclick="editorEditTask(${i})">Edit</button>
+        <button class="ed-mini-btn danger" onclick="editorDeleteTask(${i})">Delete</button>
+      </div>
+    </div>`;
+  }).join('');
+  return `<div class="tabs" style="margin-bottom:14px;">${tabsHTML}</div>
+    <div class="ed-section-intro">Tasks for <b>${escapeHtml(editorActiveTab)}</b>. Tap Edit to change time, title, description or category.</div>
+    <div class="ed-task-list">${cards||'<div class="ed-list-empty">No tasks yet.</div>'}</div>
+    <button class="ed-add-btn" onclick="editorAddTask()">+ Add Task</button>`;
+}
+function switchEditorTaskTab(k){ editorActiveTab=k; editorTaskEditingIdx=null; renderEditorSection(); }
+function editorEditTask(i){ editorTaskEditingIdx=i; renderEditorSection(); }
+function editorAddTask(){
+  if(!D[editorActiveTab]) return;
+  D[editorActiveTab].blocks.push({s:"12:00",e:"13:00",ti:"New Task",d:"",c:categories[0]?categories[0].v:'brk'});
+  editorTaskEditingIdx=D[editorActiveTab].blocks.length-1;
+  renderEditorSection();
+}
+function editorDeleteTask(i){
+  if(!confirm('Delete this task?')) return;
+  D[editorActiveTab].blocks.splice(i,1);
+  editorTaskEditingIdx=null;
+  renderEditorSection();
+}
+function editorCloseTaskPanel(){ editorTaskEditingIdx=null; renderEditorSection(); }
+function editorMoveTask(i,dir){
+  const arr=D[editorActiveTab].blocks;
+  const ni=i+dir;
+  if(ni<0||ni>=arr.length) return;
+  [arr[i],arr[ni]]=[arr[ni],arr[i]];
+  editorTaskEditingIdx=ni;
+  renderEditorSection();
+}
+function renderTaskEditPanel(i){
+  const b=D[editorActiveTab].blocks[i];
+  const opts=editorCategories.map(o=>`<option value="${o.v}"${o.v===b.c?' selected':''}>${o.label}</option>`).join('');
+  return `<button class="ed-back-btn" onclick="editorCloseTaskPanel()">&#8592; Back to Tasks</button>
+    <div class="ed-edit-panel">
+      <div class="editor-row-fields">
+        <div class="ed-field"><label>Start Time</label><input type="time" value="${b.s}" onchange="updateField('${escapeAttr(editorActiveTab)}',${i},'s',this.value)"></div>
+        <div class="ed-field"><label>End Time</label><input type="time" value="${b.e}" onchange="updateField('${escapeAttr(editorActiveTab)}',${i},'e',this.value)"></div>
+      </div>
+      <div class="ed-field"><label>Task Title</label><input type="text" value="${escapeAttr(b.ti)}" onchange="updateField('${escapeAttr(editorActiveTab)}',${i},'ti',this.value)"></div>
+      <div class="ed-field"><label>Description</label><textarea onchange="updateField('${escapeAttr(editorActiveTab)}',${i},'d',this.value)">${escapeHtml(b.d)}</textarea></div>
+      <div class="ed-field"><label>Category</label><select onchange="updateField('${escapeAttr(editorActiveTab)}',${i},'c',this.value)">${opts}</select></div>
+      <div class="ed-move-row">
+        <button class="ed-mini-btn" onclick="editorMoveTask(${i},-1)">&#8593; Move Up</button>
+        <button class="ed-mini-btn" onclick="editorMoveTask(${i},1)">&#8595; Move Down</button>
+      </div>
+    </div>`;
+}
+function updateField(dayKey,idx,field,value){ D[dayKey].blocks[idx][field]=value; }
+
+/* ── SETTINGS SECTION ── */
+function renderSettingsSection(){
+  return `<div class="ed-section-intro">Danger zone.</div>
+    <div class="ed-edit-panel">
+      <div class="ed-list-title" style="margin-bottom:6px;">Reset schedule to defaults</div>
+      <div class="ed-list-sub" style="margin-bottom:14px;">Restores the original tasks, groups and categories.<br><span style="color:rgba(42,170,142,0.8);">Your streak and completion history are NOT affected.</span></div>
+      <button class="ed-reset-sched-btn" style="width:100%;" onclick="resetSchedule()">Reset to Default</button>
+    </div>`;
 }
 
 function escapeAttr(s){return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function escapeHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
-function updateField(dayKey,idx,field,value){D[dayKey].blocks[idx][field]=value;}
-
-function addTask(){
-  if(!D[editorActiveTab]) return;
-  D[editorActiveTab].blocks.push({s:"12:00",e:"13:00",ti:"New Task",d:"",c:"brk"});
-  renderEditorBody();
-}
-
-function deleteTask(idx){
-  D[editorActiveTab].blocks.splice(idx,1);
-  renderEditorBody();
-}
-
-function moveTask(idx,dir){
-  const arr=D[editorActiveTab].blocks;
-  const newIdx=idx+dir;
-  if(newIdx<0||newIdx>=arr.length) return;
-  [arr[idx],arr[newIdx]]=[arr[newIdx],arr[idx]];
-  renderEditorBody();
-}
-
 function saveEditor(){
-  if(!dgmValidate()){return;}
-  catMgrSyncInputs();
+  if(!dgmValidate()){
+    editorSection='groups';editorGroupEditing=null;
+    renderEditorSectionTabs();renderEditorSection();
+    return;
+  }
   categories=JSON.parse(JSON.stringify(editorCategories.map(normalizeCategory)));
   saveCategories();
   dayGroups=dgmCommit();
@@ -2018,7 +2062,7 @@ function resetSchedule(){
   panel.innerHTML=`
     <div style="background:rgba(4,12,34,0.98);border:1px solid rgba(180,60,80,0.32);border-radius:18px;padding:28px 28px;max-width:300px;width:90%;box-shadow:0 0 48px rgba(0,0,20,0.8),0 1px 0 rgba(255,255,255,0.06) inset;text-align:center;">
       <div style="font-family:'Orbitron',sans-serif;font-size:12px;color:#c94f6e;letter-spacing:2px;margin-bottom:12px;">&#x26a0; CONFIRM RESET</div>
-      <div style="font-size:13px;color:#5a7a9a;line-height:1.6;margin-bottom:22px;">Reset schedule to defaults?<br>Times, tasks, categories and descriptions will be restored.<br><span style="color:rgba(42,170,142,0.8);">Streak &amp; history are NOT affected.</span></div>
+      <div style="font-size:13px;color:#5a7a9a;line-height:1.6;margin-bottom:22px;">Reset schedule to defaults?<br>Times, tasks, groups and categories will be restored.<br><span style="color:rgba(42,170,142,0.8);">Streak &amp; history are NOT affected.</span></div>
       <div style="display:flex;gap:10px;justify-content:center;">
         <button onclick="editorResetCancel()" style="font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:1.5px;padding:10px 18px;border-radius:10px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.04);color:#6a8aaa;cursor:pointer;">CANCEL</button>
         <button onclick="editorResetConfirm()" style="font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:1.5px;padding:10px 18px;border-radius:10px;border:1px solid rgba(180,60,80,0.45);background:rgba(180,60,80,0.12);color:#c94f6e;cursor:pointer;">RESET</button>
@@ -2026,9 +2070,7 @@ function resetSchedule(){
     </div>`;
   if(backdrop) backdrop.appendChild(panel);
 }
-
 function editorResetCancel(){const p=document.getElementById('editor-reset-confirm');if(p)p.remove();}
-
 function editorResetConfirm(){
   const panel=document.getElementById('editor-reset-confirm');if(panel)panel.remove();
   D=deepClone(DEFAULT_D);
@@ -2041,7 +2083,9 @@ function editorResetConfirm(){
   saveSchedule();
   flushCloudWrites(); // explicit user action — flush immediately
   editorActiveTab=active;
-  dgmRenderGroups();renderCatManager();renderEditorTabs();renderEditorBody();
+  dgmStartEdit();
+  editorSection='groups';editorGroupEditing=null;editorCategoryEditingIdx=null;editorTaskEditingIdx=null;
+  renderEditorSectionTabs();renderEditorSection();
   renderLegend();renderTabs();render();renderStreak();
 }
 
