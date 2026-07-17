@@ -800,7 +800,18 @@ const RAIN_INTENSITY = 3;
    the editor, Reset, sign-out, tab/window close) calls
    flushCloudWrites() directly so the write is not lost if the
    debounce timer never gets to fire.
-   ═══════════════════════════════════════════════════════════════ */
+
+   FIELD-REPLACEMENT NOTE (bugfix): fields like dayGroups / schedule
+   are nested maps (object-of-objects). Firestore's set(data,{merge:
+   true}) does a RECURSIVE merge of nested map fields — it adds/
+   updates whatever keys you send but does NOT remove keys that
+   existed server-side and are simply absent from the new object.
+   That meant deleting a day-group locally, saving, and reloading
+   could resurrect the deleted group because Firestore had silently
+   kept it merged in underneath the new data. We use `mergeFields`
+   (naming only the top-level field paths in this batch) instead of
+   a blanket `merge:true` so each named field is REPLACED wholesale,
+   while fields not included in this flush are left untouched. */
 const firebaseConfig = {
   apiKey: "AIzaSyCupbFuZAcgvN1ihtYxecSpfdRi7JjkwK0",
   authDomain: "mgk-schedule-dashboard.firebaseapp.com",
@@ -847,7 +858,12 @@ function flushCloudWrites(){
   if(Object.keys(writes).length===0) return;
   writes.updatedAt=firebase.firestore.FieldValue.serverTimestamp();
   setSyncStatus('syncing');
-  dbRef.set(writes,{merge:true}).then(()=>{
+  // mergeFields: only the top-level field paths named here are touched, and
+  // each one is REPLACED wholesale with the value we send (no recursive
+  // merge into whatever nested keys already exist server-side). This is the
+  // fix for deleted day-groups / schedule-groups silently reappearing after
+  // reload — see the FIELD-REPLACEMENT NOTE above.
+  dbRef.set(writes,{mergeFields:Object.keys(writes)}).then(()=>{
     setSyncStatus('synced');
   }).catch(e=>{
     console.error('Cloud sync failed (change is still saved locally):',e);
